@@ -22,3 +22,10 @@ class ClienteResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class ClienteUpdate(BaseModel):
+    nombre: Optional[str]
+
+    class Config:
+        from_attributes = True

@@ -3,9 +3,11 @@ from fastapi import FastAPI
 from app.routers import (
     rutas, clientes, configuracion, peajes, tramos, 
     tramo_detalle, marcas_vehiculos, configuracion_vehiculos,
-    rendimiento_configuracion, vehiculos
+    rendimiento_configuracion, vehiculos, auth
 )
 from app.database.init_db import init_db
+from app.database.session import get_db
+from app.auth import create_test_users
 
 app = FastAPI(
     title="Catálogo de Rutas",
@@ -16,8 +18,15 @@ app = FastAPI(
 @app.on_event("startup")
 def startup_event():
     init_db()
+    # Crear usuarios de prueba
+    db = next(get_db())
+    create_test_users(db)
+    db.close()
 
-# Routers
+# Routers - Autenticación (primero)
+app.include_router(auth.router)
+
+# Routers - Recursos
 app.include_router(configuracion.router)
 app.include_router(clientes.router)
 app.include_router(peajes.router)
