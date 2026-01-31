@@ -21,13 +21,13 @@ router = APIRouter(
 # OBTENER PEAJES
 # ============================================
 
-@router.get("/", response_model=list[PeajeResponse])
+@router.get("/", response_model=list[PeajeResponse], summary="Listar Peajes")
 def listar_peajes(
     incluir_inactivos: bool = False,
     db: Session = Depends(get_db)
 ):
     """
-    Lista peajes ACTIVOS por defecto.
+    Lista todos los peajes activos del sistema.
     
     GET /peajes/
     GET /peajes/?incluir_inactivos=true  <- Para incluir inactivos (soporte)
@@ -43,13 +43,13 @@ def listar_peajes(
     return query.all()
 
 
-@router.get("/{peaje_id}", response_model=PeajeResponse)
+@router.get("/{peaje_id}", response_model=PeajeResponse, summary="Obtener Peaje")
 def obtener_peaje(
     peaje_id: int,
     db: Session = Depends(get_db)
 ):
     """
-    Obtiene un peaje específico por ID.
+    Obtiene un peaje específico por su ID.
     
     GET /peajes/1
     """
@@ -71,14 +71,15 @@ def obtener_peaje(
 @router.post(
     "/",
     response_model=PeajeResponse,
-    status_code=status.HTTP_201_CREATED
+    status_code=status.HTTP_201_CREATED,
+    summary="Crear Peaje"
 )
 def crear_peaje(
     peaje: PeajeCreate,
     db: Session = Depends(get_db)
 ):
     """
-    Crea un nuevo peaje.
+    Crea un nuevo peaje en el sistema.
     
     POST /peajes/
     Body:
@@ -114,14 +115,14 @@ def crear_peaje(
 # ACTUALIZAR PEAJE
 # ============================================
 
-@router.put("/{peaje_id}", response_model=PeajeResponse)
+@router.put("/{peaje_id}", response_model=PeajeResponse, summary="Actualizar Peaje")
 def actualizar_peaje(
     peaje_id: int,
     peaje_update: PeajeUpdate,
     db: Session = Depends(get_db)
 ):
     """
-    Actualiza un peaje existente.
+    Actualiza la información de un peaje existente.
     
     PUT /peajes/1
     Body:
@@ -165,13 +166,13 @@ def actualizar_peaje(
 # ELIMINAR PEAJE
 # ============================================
 
-@router.delete("/{peaje_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{peaje_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Eliminar Peaje")
 def eliminar_peaje(
     peaje_id: int,
     db: Session = Depends(get_db)
 ):
     """
-    Marca un peaje como INACTIVO (soft delete).
+    Marca un peaje como inactivo (eliminación lógica).
     
     DELETE /peajes/1
     

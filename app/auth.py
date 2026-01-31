@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import HTTPException, Depends, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
@@ -28,8 +28,10 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 # Contexto de hashing para contraseñas
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# Esquema OAuth2
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+# Esquema HTTP Bearer - Swagger UI mostrará un campo simple para el token
+security = HTTPBearer(
+    description="Ingresa el token JWT obtenido del endpoint /login"
+)
 
 
 # ============================================
@@ -107,8 +109,9 @@ def decode_token(token: str) -> dict:
 # DEPENDENCIAS PARA ENDPOINTS
 # ============================================
 
+
 async def get_current_user(
-    token: str = Depends(oauth2_scheme),
+    credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db)
 ) -> Usuario:
     """
@@ -120,6 +123,7 @@ async def get_current_user(
         HTTPException 401: Si el token es inválido
         HTTPException 404: Si el usuario no existe
     """
+    token = credentials.credentials
     payload = decode_token(token)
     email: str = payload.get("sub")
     

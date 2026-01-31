@@ -29,13 +29,13 @@ class MarcaVehiculoUpdate(BaseModel):
 # OBTENER MARCAS
 # ============================================
 
-@router.get("/", response_model=list[MarcaVehiculoResponse])
+@router.get("/", response_model=list[MarcaVehiculoResponse], summary="Listar Marcas")
 def listar_marcas(
     incluir_inactivos: bool = False,
     db: Session = Depends(get_db)
 ):
     """
-    Lista marcas ACTIVAS por defecto.
+    Lista todas las marcas de vehículos activas.
     
     GET /marcas-vehiculos/
     GET /marcas-vehiculos/?incluir_inactivos=true  <- Para incluir inactivos (soporte)
@@ -51,13 +51,13 @@ def listar_marcas(
     return query.all()
 
 
-@router.get("/{marca_id}", response_model=MarcaVehiculoResponse)
+@router.get("/{marca_id}", response_model=MarcaVehiculoResponse, summary="Obtener Marca")
 def obtener_marca(
     marca_id: int,
     db: Session = Depends(get_db)
 ):
     """
-    Obtiene una marca específica por ID.
+    Obtiene una marca específica por su ID.
     
     GET /marcas-vehiculos/1
     """

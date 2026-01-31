@@ -11,7 +11,25 @@ from app.auth import create_test_users
 
 app = FastAPI(
     title="Catálogo de Rutas",
-    description="Backend para gestión de rutas, combustible y costos",
+    description="""
+## 🚀 Backend para gestión de rutas, combustible y costos
+
+### 🔐 Autenticación
+Esta API requiere autenticación JWT para la mayoría de endpoints.
+
+**Pasos para autenticarte:**
+1. Usa el endpoint `POST /login` con credenciales válidas
+2. Copia el `access_token` de la respuesta
+3. Click en el botón 🔒 **Authorize** (arriba a la derecha)
+4. Pega el token en el campo que aparece
+5. Click en **Authorize** y luego **Close**
+
+**Usuarios de prueba disponibles:**
+- `admin@test.com` / `admin123` (acceso total)
+- `supervisor@test.com` / `supervisor123` (todo excepto DELETE)
+- `gestor_clientes@test.com` / `gestor123` (solo clientes)
+- `consultor@test.com` / `consultor123` (solo lectura)
+    """,
     version="1.0.0"
 )
 

@@ -33,13 +33,13 @@ class RendimientoConfiguracionUpdate(BaseModel):
 # OBTENER RENDIMIENTOS
 # ============================================
 
-@router.get("/", response_model=list[RendimientoConfiguracionResponse])
+@router.get("/", response_model=list[RendimientoConfiguracionResponse], summary="Listar Rendimientos")
 def listar_rendimientos(
     incluir_inactivos: bool = False,
     db: Session = Depends(get_db)
 ):
     """
-    Lista rendimientos ACTIVOS por defecto.
+    Lista todos los rendimientos de configuraciones activos.
     
     GET /rendimiento-configuracion/
     GET /rendimiento-configuracion/?incluir_inactivos=true  <- Para incluir inactivos (soporte)
@@ -55,14 +55,14 @@ def listar_rendimientos(
     return query.all()
 
 
-@router.get("/configuracion/{config_id}", response_model=list[RendimientoConfiguracionResponse])
+@router.get("/configuracion/{config_id}", response_model=list[RendimientoConfiguracionResponse], summary="Listar Rendimientos por Configuración")
 def listar_rendimientos_por_configuracion(
     config_id: int,
     incluir_inactivos: bool = False,
     db: Session = Depends(get_db)
 ):
     """
-    Lista rendimientos de una configuración ACTIVOS por defecto.
+    Lista los rendimientos de una configuración específica.
     
     GET /rendimiento-configuracion/configuracion/1
     GET /rendimiento-configuracion/configuracion/1?incluir_inactivos=true  <- Para incluir inactivos
@@ -92,7 +92,7 @@ def listar_rendimientos_por_configuracion(
     return query.all()
 
 
-@router.get("/{rendimiento_id}", response_model=RendimientoConfiguracionResponse)
+@router.get("/{rendimiento_id}", response_model=RendimientoConfiguracionResponse, summary="Obtener Rendimiento")
 def obtener_rendimiento(
     rendimiento_id: int,
     db: Session = Depends(get_db)

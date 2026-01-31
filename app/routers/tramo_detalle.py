@@ -27,14 +27,14 @@ class TramoDetalleCreate(BaseModel):
 # OBTENER DETALLES DE TRAMO
 # ============================================
 
-@router.get("/tramo/{tramo_id}", response_model=list[TramoDetalleResponse])
+@router.get("/tramo/{tramo_id}", response_model=list[TramoDetalleResponse], summary="Listar Detalles de Tramo")
 def listar_detalles_tramo(
     tramo_id: int,
     incluir_inactivos: bool = False,
     db: Session = Depends(get_db)
 ):
     """
-    Lista detalles de un tramo ACTIVOS por defecto.
+    Lista los detalles de un tramo específico.
     
     GET /tramo-detalle/tramo/1
     GET /tramo-detalle/tramo/1?incluir_inactivos=true  <- Para incluir inactivos (soporte)
@@ -59,13 +59,13 @@ def listar_detalles_tramo(
     return query.all()
 
 
-@router.get("/{detalle_id}", response_model=TramoDetalleResponse)
+@router.get("/{detalle_id}", response_model=TramoDetalleResponse, summary="Obtener Detalle de Tramo")
 def obtener_detalle(
     detalle_id: int,
     db: Session = Depends(get_db)
 ):
     """
-    Obtiene un detalle específico.
+    Obtiene un detalle de tramo específico por su ID.
     
     GET /tramo-detalle/1
     """
@@ -89,14 +89,15 @@ def obtener_detalle(
 @router.post(
     "/",
     response_model=TramoDetalleResponse,
-    status_code=status.HTTP_201_CREATED
+    status_code=status.HTTP_201_CREATED,
+    summary="Crear Detalle de Tramo"
 )
 def crear_detalle_tramo(
     detalle: TramoDetalleCreate,
     db: Session = Depends(get_db)
 ):
     """
-    Crea un nuevo DETALLE de tramo.
+    Crea un nuevo detalle de tramo.
     
     POST /tramo-detalle/
     Body:

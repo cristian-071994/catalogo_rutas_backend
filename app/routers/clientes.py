@@ -20,14 +20,14 @@ router = APIRouter(
 )
 
 # Crear cliente
-@router.post("/", response_model=ClienteResponse)
+@router.post("/", response_model=ClienteResponse, summary="Crear Cliente")
 def crear_cliente(
     cliente: ClienteCreate,
     current_user: Usuario = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
-    Crea un nuevo cliente.
+    Crea un nuevo cliente en el sistema.
     
     ⚠️ Requiere autenticación
     
@@ -67,14 +67,14 @@ def crear_cliente(
     return nuevo_cliente
 
 # Listar cliente
-@router.get("/", response_model=list[ClienteResponse])
+@router.get("/", response_model=list[ClienteResponse], summary="Listar Clientes")
 def listar_clientes(
     incluir_inactivos: bool = False,
     current_user: Usuario = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
-    Lista clientes ACTIVOS por defecto.
+    Lista todos los clientes activos del sistema.
     
     GET /clientes/
     GET /clientes/?incluir_inactivos=true  <- Para incluir inactivos (soporte)
@@ -93,14 +93,14 @@ def listar_clientes(
     return query.all()
 
 # Obtener cliente por ID (con rutas)
-@router.get("/{cliente_id}", response_model=ClienteResponse)
+@router.get("/{cliente_id}", response_model=ClienteResponse, summary="Obtener Cliente")
 def obtener_cliente(
     cliente_id: int,
     current_user: Usuario = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
-    Obtiene un cliente específico por ID.
+    Obtiene un cliente específico por su ID.
     
     ⚠️ Requiere autenticación
     """
@@ -124,7 +124,7 @@ def obtener_cliente(
 # ============================================
 
 
-@router.put("/{cliente_id}", response_model=ClienteResponse)
+@router.put("/{cliente_id}", response_model=ClienteResponse, summary="Actualizar Cliente")
 def actualizar_cliente(
     cliente_id: int,
     cliente_update: ClienteUpdate,
@@ -132,7 +132,7 @@ def actualizar_cliente(
     db: Session = Depends(get_db)
 ):
     """
-    Actualiza un cliente existente.
+    Actualiza la información de un cliente existente.
 
     ⚠️ Requiere autenticación
     
@@ -194,14 +194,14 @@ def actualizar_cliente(
 # ============================================
 
 
-@router.delete("/{cliente_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{cliente_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Eliminar Cliente")
 def eliminar_cliente(
     cliente_id: int,
     current_user: Usuario = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
-    Marca un cliente como INACTIVO (soft delete).
+    Marca un cliente como inactivo (eliminación lógica).
 
     ⚠️ Requiere autenticación
     

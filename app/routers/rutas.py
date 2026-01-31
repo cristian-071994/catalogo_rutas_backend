@@ -21,7 +21,8 @@ router = APIRouter(prefix="/rutas", tags=["Rutas"])
 @router.post(
     "/",
     response_model=RutaResponse,
-    status_code=status.HTTP_201_CREATED
+    status_code=status.HTTP_201_CREATED,
+    summary="Crear Ruta"
 )
 def crear_ruta(
     ruta: RutaCreate,
@@ -53,13 +54,13 @@ def crear_ruta(
 
 
 # Consultar las rutas - Listar
-@router.get("/", response_model=list[RutaResponse])
+@router.get("/", response_model=list[RutaResponse], summary="Listar Rutas")
 def listar_rutas(
     incluir_inactivos: bool = False,
     db: Session = Depends(get_db)
 ):
     """
-    Lista rutas ACTIVAS por defecto.
+    Lista todas las rutas activas del sistema.
     
     GET /rutas/
     GET /rutas/?incluir_inactivos=true  <- Para incluir inactivos (soporte)
@@ -77,7 +78,7 @@ def listar_rutas(
 
 
 # Consultar ruta por id
-@router.get("/{ruta_id}", response_model=RutaResponse)
+@router.get("/{ruta_id}", response_model=RutaResponse, summary="Obtener Ruta")
 def obtener_ruta(ruta_id: int, db: Session = Depends(get_db)):
     ruta = db.query(Ruta).filter(Ruta.id == ruta_id).first()
 
@@ -94,7 +95,7 @@ def obtener_ruta(ruta_id: int, db: Session = Depends(get_db)):
 # AGREGAR TRAMO A RUTA
 # ============================================
 
-@router.post("/{ruta_id}/tramos/{tramo_id}")
+@router.post("/{ruta_id}/tramos/{tramo_id}", summary="Agregar Tramo a Ruta")
 def agregar_tramo_a_ruta(
     ruta_id: int,
     tramo_id: int,

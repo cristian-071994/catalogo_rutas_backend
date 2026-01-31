@@ -21,13 +21,13 @@ router = APIRouter(
 )
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login", response_model=TokenResponse, summary="Iniciar Sesión")
 def login(
     credentials: LoginRequest,
     db: Session = Depends(get_db)
 ):
     """
-    Endpoint de login - Obtiene un token JWT.
+    Inicia sesión y obtiene un token JWT.
 
     POST /login
     Body:
@@ -73,10 +73,10 @@ def login(
     )
 
 
-@router.get("/me", response_model=UsuarioResponse)
+@router.get("/me", response_model=UsuarioResponse, summary="Obtener Usuario Actual")
 def get_me(current_user: Usuario = Depends(get_current_user)):
     """
-    Obtiene información del usuario autenticado.
+    Obtiene la información del usuario autenticado actualmente.
 
     GET /me
     Headers:

@@ -32,13 +32,13 @@ class VehiculoUpdate(BaseModel):
 # OBTENER VEHÍCULOS
 # ============================================
 
-@router.get("/", response_model=list[VehiculoResponse])
+@router.get("/", response_model=list[VehiculoResponse], summary="Listar Vehículos")
 def listar_vehiculos(
     incluir_inactivos: bool = False,
     db: Session = Depends(get_db)
 ):
     """
-    Lista vehículos ACTIVOS por defecto.
+    Lista todos los vehículos activos del sistema.
     
     GET /vehiculos/
     GET /vehiculos/?incluir_inactivos=true  <- Para incluir inactivos (soporte)
@@ -54,13 +54,13 @@ def listar_vehiculos(
     return query.all()
 
 
-@router.get("/{vehiculo_id}", response_model=VehiculoResponse)
+@router.get("/{vehiculo_id}", response_model=VehiculoResponse, summary="Obtener Vehículo")
 def obtener_vehiculo(
     vehiculo_id: int,
     db: Session = Depends(get_db)
 ):
     """
-    Obtiene un vehículo específico.
+    Obtiene un vehículo específico por su ID.
     
     GET /vehiculos/1
     """

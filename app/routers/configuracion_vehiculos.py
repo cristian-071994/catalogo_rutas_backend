@@ -32,13 +32,13 @@ class ConfiguracionVehiculoUpdate(BaseModel):
 # OBTENER CONFIGURACIONES
 # ============================================
 
-@router.get("/", response_model=list[ConfiguracionVehiculoResponse])
+@router.get("/", response_model=list[ConfiguracionVehiculoResponse], summary="Listar Configuraciones")
 def listar_configuraciones(
     incluir_inactivos: bool = False,
     db: Session = Depends(get_db)
 ):
     """
-    Lista configuraciones ACTIVAS por defecto.
+    Lista todas las configuraciones de vehículos activas.
     
     GET /configuracion-vehiculos/
     GET /configuracion-vehiculos/?incluir_inactivos=true  <- Para incluir inactivos (soporte)
@@ -54,13 +54,13 @@ def listar_configuraciones(
     return query.all()
 
 
-@router.get("/{config_id}", response_model=ConfiguracionVehiculoResponse)
+@router.get("/{config_id}", response_model=ConfiguracionVehiculoResponse, summary="Obtener Configuración")
 def obtener_configuracion(
     config_id: int,
     db: Session = Depends(get_db)
 ):
     """
-    Obtiene una configuración específica.
+    Obtiene una configuración de vehículo específica por su ID.
     
     GET /configuracion-vehiculos/1
     """
@@ -84,7 +84,8 @@ def obtener_configuracion(
 @router.post(
     "/",
     response_model=ConfiguracionVehiculoResponse,
-    status_code=status.HTTP_201_CREATED
+    status_code=status.HTTP_201_CREATED,
+    summary="Crear Configuración"
 )
 def crear_configuracion(
     config: ConfiguracionVehiculoCreate,

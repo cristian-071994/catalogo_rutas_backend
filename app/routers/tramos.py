@@ -24,13 +24,13 @@ class TramoCreate(BaseModel):
 # OBTENER TRAMOS
 # ============================================
 
-@router.get("/", response_model=list[TramoResponse])
+@router.get("/", response_model=list[TramoResponse], summary="Listar Tramos")
 def listar_tramos(
     incluir_inactivos: bool = False,
     db: Session = Depends(get_db)
 ):
     """
-    Lista tramos ACTIVOS por defecto.
+    Lista todos los tramos activos del sistema.
     
     GET /tramos/
     GET /tramos/?incluir_inactivos=true  <- Para incluir inactivos (soporte)
@@ -46,13 +46,13 @@ def listar_tramos(
     return query.all()
 
 
-@router.get("/{tramo_id}", response_model=TramoResponse)
+@router.get("/{tramo_id}", response_model=TramoResponse, summary="Obtener Tramo")
 def obtener_tramo(
     tramo_id: int,
     db: Session = Depends(get_db)
 ):
     """
-    Obtiene un tramo específico por ID.
+    Obtiene un tramo específico por su ID.
     
     GET /tramos/1
     """
@@ -74,7 +74,8 @@ def obtener_tramo(
 @router.post(
     "/",
     response_model=TramoResponse,
-    status_code=status.HTTP_201_CREATED
+    status_code=status.HTTP_201_CREATED,
+    summary="Crear Tramo"
 )
 def crear_tramo(
     tramo: TramoCreate,
