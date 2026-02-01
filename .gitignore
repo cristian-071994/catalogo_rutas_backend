@@ -66,3 +66,21 @@ logs/
 *.tmp
 tmp/
 temp/
+
+# Node modules (Frontend)
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.next/
+frontend/out/
+
+# Frontend environment
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+
+# Dependency directories
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
