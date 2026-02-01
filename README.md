@@ -44,7 +44,20 @@ source venv/bin/activate     # Linux/Mac
 pip install -r requirements.txt
 ```
 
-### 4. Ejecutar el servidor
+### 4. Configurar variables de entorno
+```bash
+# Copiar plantilla de configuración
+cp .env.example .env
+
+# Generar SECRET_KEY seguro (opcional, ya hay uno por defecto)
+python -c "import secrets; print(secrets.token_urlsafe(64))"
+
+# Editar .env y pegar la clave generada en SECRET_KEY
+```
+
+**⚠️ IMPORTANTE**: El archivo `.env` contiene información sensible y **NO debe subirse a Git**. Ya está incluido en `.gitignore`.
+
+### 5. Ejecutar el servidor
 ```bash
 python -m uvicorn app.main:app --reload
 ```

@@ -29,8 +29,20 @@ class Tramo(Base):
         back_populates="tramo"
     )
     
+    # Relación con peajes (vía tabla puente)
+    peajes = relationship(
+        "TramoPeaje",
+        back_populates="tramo",
+        cascade="all, delete-orphan"
+    )
+    
     detalles = relationship(
         "TramoDetalle",
         back_populates="tramo",
         cascade="all, delete-orphan"
     )
+
+    @property
+    def peajes_list(self):
+        """Devuelve la lista de objetos Peaje asociados a este tramo"""
+        return [tp.peaje for tp in self.peajes if tp.peaje]

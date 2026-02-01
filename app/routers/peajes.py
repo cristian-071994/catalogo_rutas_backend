@@ -4,17 +4,56 @@ from sqlalchemy import func
 
 from app.database.session import get_db
 from app.models.peaje import Peaje
+from app.models.usuario import Usuario
 from app.models.enums import EstadoGeneral
 from app.schemas.peaje import (
     PeajeCreate,
     PeajeUpdate,
     PeajeResponse
 )
+from app.auth import get_current_user, require_permission
+from app.services.peaje_sync_service import sincronizar_peajes_desde_api
 
 router = APIRouter(
     prefix="/peajes",
     tags=["Peajes"]
 )
+
+
+# ============================================
+# SINCRONIZACIÓN
+# ============================================
+
+@router.post("/sincronizar", summary="Sincronizar Peajes desde API Oficial")
+async def sincronizar_peajes(
+    current_user: Usuario = Depends(require_permission("crear_peaje")),
+    db: Session = Depends(get_db)
+):
+    """
+    Sincroniza peajes desde la API oficial del gobierno colombiano.
+    
+    POST /peajes/sincronizar
+    
+    Descarga todos los peajes de https://www.datos.gov.co/resource/68qj-5xux.json
+    y actualiza/crea en la base de datos.
+    
+    Solo actualiza peajes de fuente "API_GOBIERNO", respeta los manuales.
+    Usa la tarifa de Categoría V (camiones).
+    
+    Requiere permiso: crear_peaje
+    """
+    resultado = await sincronizar_peajes_desde_api(db)
+    
+    if not resultado["success"]:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=resultado.get("error", "Error desconocido en sincronización")
+        )
+    
+    return {
+        "message": "Sincronización completada exitosamente",
+        **resultado
+    }
 
 
 # ============================================
@@ -24,6 +63,7 @@ router = APIRouter(
 @router.get("/", response_model=list[PeajeResponse], summary="Listar Peajes")
 def listar_peajes(
     incluir_inactivos: bool = False,
+    current_user: Usuario = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -46,6 +86,7 @@ def listar_peajes(
 @router.get("/{peaje_id}", response_model=PeajeResponse, summary="Obtener Peaje")
 def obtener_peaje(
     peaje_id: int,
+    current_user: Usuario = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -64,6 +105,45 @@ def obtener_peaje(
     return peaje
 
 
+@router.get("/buscar/por-nombre", response_model=list[PeajeResponse], summary="Buscar Peajes")
+def buscar_peajes(
+    q: str = "",
+    limite: int = 50,
+    current_user: Usuario = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Busca peajes por nombre (búsqueda LIKE, case-insensitive).
+    
+    GET /peajes/buscar/por-nombre?q=lobo
+    GET /peajes/buscar/por-nombre?q=lobo&limite=100
+    
+    Ejemplos:
+    - ?q=lobo → devuelve "Lobo Guerrero", "Lobo Sur", etc.
+    - ?q=la mesa → devuelve todos con "la mesa" en nombre
+    - ?q= (vacío) → devuelve todos
+    
+    Requiere: estar autenticado
+    Parámetros:
+    - q: término de búsqueda (LIKE)
+    - limite: máximo de resultados (default: 50)
+    """
+    if not q or q.strip() == "":
+        # Si no hay búsqueda, devuelve los primeros N activos
+        return db.query(Peaje).filter(
+            Peaje.estado == EstadoGeneral.activo
+        ).limit(limite).all()
+    
+    # Búsqueda LIKE case-insensitive
+    termino = f"%{q.strip()}%"
+    peajes = db.query(Peaje).filter(
+        Peaje.estado == EstadoGeneral.activo,
+        Peaje.nombre_peaje.ilike(termino)
+    ).limit(limite).all()
+    
+    return peajes
+
+
 # ============================================
 # CREAR PEAJE
 # ============================================
@@ -72,38 +152,46 @@ def obtener_peaje(
     "/",
     response_model=PeajeResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Crear Peaje"
+    summary="Crear Peaje Manual"
 )
 def crear_peaje(
     peaje: PeajeCreate,
+    current_user: Usuario = Depends(require_permission("crear_peaje")),
     db: Session = Depends(get_db)
 ):
     """
-    Crea un nuevo peaje en el sistema.
+    Crea un nuevo peaje MANUAL en el sistema.
     
     POST /peajes/
     Body:
     {
-        "nombre": "Peaje La Loma",
-        "costo": 5500
+        "nombre_peaje": "Peaje La Loma",
+        "sector": "Cali - Buga",
+        "costo": 15000,
+        "longitud": -76.328497,
+        "latitud": 3.995509
     }
     
     ⚠️ El nombre debe ser ÚNICO
+    ⚠️ Los peajes creados manualmente no se sobrescriben en sincronización
     """
     
     # Validar que no exista con el mismo nombre (case-insensitive)
     existente = db.query(Peaje).filter(
-        func.lower(Peaje.nombre) == func.lower(peaje.nombre)
+        func.lower(Peaje.nombre_peaje) == func.lower(peaje.nombre_peaje)
     ).first()
 
     if existente:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Ya existe un peaje con nombre '{peaje.nombre}'"
+            detail=f"Ya existe un peaje con nombre '{peaje.nombre_peaje}'"
         )
 
     # Crear nuevo peaje
-    nuevo_peaje = Peaje(**peaje.model_dump())
+    nuevo_peaje = Peaje(
+        **peaje.model_dump(),
+        fuente="MANUAL"  # Marcar como manual
+    )
     db.add(nuevo_peaje)
     db.commit()
     db.refresh(nuevo_peaje)
@@ -119,6 +207,7 @@ def crear_peaje(
 def actualizar_peaje(
     peaje_id: int,
     peaje_update: PeajeUpdate,
+    current_user: Usuario = Depends(require_permission("editar_peaje")),
     db: Session = Depends(get_db)
 ):
     """
@@ -169,6 +258,7 @@ def actualizar_peaje(
 @router.delete("/{peaje_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Eliminar Peaje")
 def eliminar_peaje(
     peaje_id: int,
+    current_user: Usuario = Depends(require_permission("eliminar_peaje")),
     db: Session = Depends(get_db)
 ):
     """

@@ -1,9 +1,8 @@
-from sqlalchemy import Column, Integer, String, DateTime, Enum
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from app.database.base import Base
-from app.models.rol import RolEnum
 
 
 class Usuario(Base):
@@ -20,12 +19,11 @@ class Usuario(Base):
     # Contraseña hasheada (NUNCA almacenar en texto plano)
     password_hash = Column(String(255), nullable=False)
     
-    # Rol del usuario
-    rol = Column(
-        Enum(RolEnum, name="rol_enum"),
-        default=RolEnum.consultor,
-        nullable=False
-    )
+    # Rol del usuario (FK a tabla roles - sistema profesional)
+    rol_id = Column(Integer, ForeignKey('roles.id'), nullable=False)
+    
+    # Relación con Rol
+    rol = relationship("Rol", foreign_keys=[rol_id], lazy="joined")
     
     # Estado
     activo = Column(Integer, default=1)  # 1 = activo, 0 = inactivo
@@ -35,4 +33,5 @@ class Usuario(Base):
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
     def __repr__(self):
-        return f"<Usuario(id={self.id}, email={self.email}, rol={self.rol})>"
+        return f"<Usuario(id={self.id}, email={self.email}, rol={self.rol.nombre if self.rol else 'N/A'})>"
+

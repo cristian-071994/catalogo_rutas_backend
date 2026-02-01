@@ -62,14 +62,14 @@ def login(
 
     # Crear token JWT
     access_token = create_access_token(
-        data={"sub": usuario.email, "rol": usuario.rol.value}
+        data={"sub": usuario.email, "rol": usuario.rol.nombre if usuario.rol else "consultor"}
     )
 
     return TokenResponse(
         access_token=access_token,
         token_type="bearer",
         usuario_nombre=usuario.nombre,
-        usuario_rol=usuario.rol.value,
+        usuario_rol=usuario.rol.nombre if usuario.rol else "consultor",
     )
 
 
@@ -88,6 +88,6 @@ def get_me(current_user: Usuario = Depends(get_current_user)):
         id=current_user.id,
         nombre=current_user.nombre,
         email=current_user.email,
-        rol=current_user.rol.value,
+        rol=current_user.rol.nombre if current_user.rol else "consultor",
         activo=current_user.activo,
     )

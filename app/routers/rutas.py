@@ -10,9 +10,11 @@ from app.models.tramo_ruta import TramoRuta
 from app.models.tramo import Tramo
 from app.models.ruta_peaje import RutaPeaje
 from app.models.peaje import Peaje
+from app.models.usuario import Usuario
 from app.models.enums import DireccionPeaje, EstadoGeneral
 from app.schemas.ruta import RutaCreate, RutaResponse, RutaUpdate
 from app.services.ruta_service import calcular_costo_ruta_detallado
+from app.auth import get_current_user, require_permission
 
 
 router = APIRouter(prefix="/rutas", tags=["Rutas"])
@@ -26,6 +28,7 @@ router = APIRouter(prefix="/rutas", tags=["Rutas"])
 )
 def crear_ruta(
     ruta: RutaCreate,
+    current_user: Usuario = Depends(require_permission("crear_ruta")),
     db: Session = Depends(get_db)
 ):
     # 1. Validar que el cliente exista
@@ -57,6 +60,7 @@ def crear_ruta(
 @router.get("/", response_model=list[RutaResponse], summary="Listar Rutas")
 def listar_rutas(
     incluir_inactivos: bool = False,
+    current_user: Usuario = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -79,7 +83,11 @@ def listar_rutas(
 
 # Consultar ruta por id
 @router.get("/{ruta_id}", response_model=RutaResponse, summary="Obtener Ruta")
-def obtener_ruta(ruta_id: int, db: Session = Depends(get_db)):
+def obtener_ruta(
+    ruta_id: int,
+    current_user: Usuario = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     ruta = db.query(Ruta).filter(Ruta.id == ruta_id).first()
 
     if not ruta:
@@ -100,6 +108,7 @@ def agregar_tramo_a_ruta(
     ruta_id: int,
     tramo_id: int,
     orden: int,
+    current_user: Usuario = Depends(require_permission("editar_ruta")),
     db: Session = Depends(get_db)
 ):
     """
@@ -157,88 +166,6 @@ def agregar_tramo_a_ruta(
 
 
 # ============================================
-# AGREGAR PEAJE A RUTA
-# ============================================
-
-class AgregarPeajeRequest(BaseModel):
-    """Body para agregar peaje a ruta"""
-    orden: int = None
-    direccion: DireccionPeaje = DireccionPeaje.IDA
-
-
-@router.post("/{ruta_id}/peajes/{peaje_id}")
-def agregar_peaje_a_ruta(
-    ruta_id: int,
-    peaje_id: int,
-    peaje_data: AgregarPeajeRequest,
-    db: Session = Depends(get_db)
-):
-    """
-    Agrega un peaje a una ruta, permitiendo el mismo peaje múltiples veces (IDA y REGRESO).
-    
-    POST /rutas/1/peajes/2
-    Body:
-    {
-        "orden": 1,
-        "direccion": "IDA"
-    }
-    
-    Esto crea la relación RutaPeaje
-    Ahora PERMITE el mismo peaje dos veces: IDA y REGRESO
-    """
-    
-    # Validar que la ruta exista
-    ruta = db.query(Ruta).filter(Ruta.id == ruta_id).first()
-    if not ruta:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Ruta no encontrada"
-        )
-
-    # Validar que el peaje exista
-    peaje = db.query(Peaje).filter(Peaje.id == peaje_id).first()
-    if not peaje:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Peaje no encontrado"
-        )
-
-    # Validar que no exista CON LA MISMA DIRECCIÓN
-    existente = db.query(RutaPeaje).filter(
-        RutaPeaje.ruta_id == ruta_id,
-        RutaPeaje.peaje_id == peaje_id,
-        RutaPeaje.direccion == peaje_data.direccion
-    ).first()
-
-    if existente:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Este peaje ya está en la ruta en dirección {peaje_data.direccion}"
-        )
-
-    # Crear RutaPeaje con dirección
-    ruta_peaje = RutaPeaje(
-        ruta_id=ruta_id,
-        peaje_id=peaje_id,
-        orden=peaje_data.orden,
-        direccion=peaje_data.direccion
-    )
-
-    db.add(ruta_peaje)
-    db.commit()
-    db.refresh(ruta_peaje)
-
-    return {
-        "mensaje": "Peaje agregado a la ruta",
-        "ruta_peaje_id": ruta_peaje.id,
-        "peaje_nombre": peaje.nombre,
-        "peaje_costo": float(peaje.costo),
-        "direccion": ruta_peaje.direccion
-    }
-        
-
-
-# ============================================
 # VER RESUMEN DE RUTA (CON COSTOS)
 # ============================================
 
@@ -247,6 +174,7 @@ def obtener_resumen_ruta(
     ruta_id: int,
     configuracion_id: int,
     precio_galon: Decimal = None,
+    current_user: Usuario = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -301,6 +229,7 @@ def obtener_resumen_ruta(
 def actualizar_ruta(
     ruta_id: int,
     ruta_update: RutaUpdate,
+    current_user: Usuario = Depends(require_permission("editar_ruta")),
     db: Session = Depends(get_db)
 ):
     """
@@ -341,6 +270,7 @@ def actualizar_ruta(
 @router.delete("/{ruta_id}", status_code=status.HTTP_204_NO_CONTENT)
 def eliminar_ruta(
     ruta_id: int,
+    current_user: Usuario = Depends(require_permission("eliminar_ruta")),
     db: Session = Depends(get_db)
 ):
     """
@@ -378,6 +308,7 @@ def eliminar_ruta(
 def listar_rutas_por_cliente(
     cliente_id: int,
     incluir_inactivos: bool = False,
+    current_user: Usuario = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -415,6 +346,7 @@ def listar_rutas_por_cliente(
 def eliminar_tramo_de_ruta(
     ruta_id: int,
     tramo_ruta_id: int,
+    current_user: Usuario = Depends(require_permission("editar_ruta")),
     db: Session = Depends(get_db)
 ):
     """
@@ -446,50 +378,6 @@ def eliminar_tramo_de_ruta(
         )
 
     db.delete(tramo_ruta)
-    db.commit()
-
-    return None
-
-
-# ============================================
-# ELIMINAR PEAJE DE UNA RUTA
-# ============================================
-
-@router.delete("/{ruta_id}/peajes/{ruta_peaje_id}", status_code=status.HTTP_204_NO_CONTENT)
-def eliminar_peaje_de_ruta(
-    ruta_id: int,
-    ruta_peaje_id: int,
-    db: Session = Depends(get_db)
-):
-    """
-    Elimina un peaje de una ruta (rompe la relación RutaPeaje).
-    
-    DELETE /rutas/1/peajes/3
-    
-    Esto NO elimina el peaje en sí, solo lo saca de la ruta.
-    """
-    
-    # Validar que la ruta exista
-    ruta = db.query(Ruta).filter(Ruta.id == ruta_id).first()
-    if not ruta:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Ruta no encontrada"
-        )
-
-    # Obtener la relación RutaPeaje
-    ruta_peaje = db.query(RutaPeaje).filter(
-        RutaPeaje.id == ruta_peaje_id,
-        RutaPeaje.ruta_id == ruta_id
-    ).first()
-
-    if not ruta_peaje:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Peaje no encontrado en esta ruta"
-        )
-
-    db.delete(ruta_peaje)
     db.commit()
 
     return None

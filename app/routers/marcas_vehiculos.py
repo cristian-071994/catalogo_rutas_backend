@@ -4,8 +4,10 @@ from sqlalchemy import func
 
 from app.database.session import get_db
 from app.models.marca_vehiculo import MarcaVehiculo
+from app.models.usuario import Usuario
 from app.models.enums import EstadoGeneral
 from app.schemas.marca_vehiculo import MarcaVehiculoResponse
+from app.auth import get_current_user, require_permission
 from pydantic import BaseModel
 
 router = APIRouter(
@@ -32,6 +34,7 @@ class MarcaVehiculoUpdate(BaseModel):
 @router.get("/", response_model=list[MarcaVehiculoResponse], summary="Listar Marcas")
 def listar_marcas(
     incluir_inactivos: bool = False,
+    current_user: Usuario = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -54,6 +57,7 @@ def listar_marcas(
 @router.get("/{marca_id}", response_model=MarcaVehiculoResponse, summary="Obtener Marca")
 def obtener_marca(
     marca_id: int,
+    current_user: Usuario = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -83,6 +87,7 @@ def obtener_marca(
 )
 def crear_marca(
     marca: MarcaVehiculoCreate,
+    current_user: Usuario = Depends(require_permission("crear_marca")),
     db: Session = Depends(get_db)
 ):
     """
@@ -125,6 +130,7 @@ def crear_marca(
 def actualizar_marca(
     marca_id: int,
     marca_update: MarcaVehiculoUpdate,
+    current_user: Usuario = Depends(require_permission("editar_marca")),
     db: Session = Depends(get_db)
 ):
     """
@@ -163,6 +169,7 @@ def actualizar_marca(
 @router.delete("/{marca_id}", status_code=status.HTTP_204_NO_CONTENT)
 def eliminar_marca(
     marca_id: int,
+    current_user: Usuario = Depends(require_permission("eliminar_marca")),
     db: Session = Depends(get_db)
 ):
     """

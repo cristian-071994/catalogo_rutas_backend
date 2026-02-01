@@ -6,8 +6,10 @@ from decimal import Decimal
 from app.database.session import get_db
 from app.models.tramo_detalle import TramoDetalle
 from app.models.tramo import Tramo
+from app.models.usuario import Usuario
 from app.schemas.tramo_detalle import TramoDetalleResponse
 from app.models.enums import TipoCarga, TipoTerreno, EstadoGeneral
+from app.auth import get_current_user, require_permission
 
 router = APIRouter(
     prefix="/tramo-detalle",
@@ -31,6 +33,7 @@ class TramoDetalleCreate(BaseModel):
 def listar_detalles_tramo(
     tramo_id: int,
     incluir_inactivos: bool = False,
+    current_user: Usuario = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -62,6 +65,7 @@ def listar_detalles_tramo(
 @router.get("/{detalle_id}", response_model=TramoDetalleResponse, summary="Obtener Detalle de Tramo")
 def obtener_detalle(
     detalle_id: int,
+    current_user: Usuario = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -94,6 +98,7 @@ def obtener_detalle(
 )
 def crear_detalle_tramo(
     detalle: TramoDetalleCreate,
+    current_user: Usuario = Depends(require_permission("crear_tramo_detalle")),
     db: Session = Depends(get_db)
 ):
     """
@@ -150,6 +155,7 @@ def crear_detalle_tramo(
 def actualizar_detalle_tramo(
     detalle_id: int,
     detalle_update: TramoDetalleCreate,
+    current_user: Usuario = Depends(require_permission("editar_tramo_detalle")),
     db: Session = Depends(get_db)
 ):
     """
@@ -192,6 +198,7 @@ def actualizar_detalle_tramo(
 @router.delete("/{detalle_id}", status_code=status.HTTP_204_NO_CONTENT)
 def eliminar_detalle_tramo(
     detalle_id: int,
+    current_user: Usuario = Depends(require_permission("eliminar_tramo_detalle")),
     db: Session = Depends(get_db)
 ):
     """

@@ -6,7 +6,8 @@ from app.models.tramo_ruta import TramoRuta
 from app.models.tramo_detalle import TramoDetalle
 
 from app.models.peaje import Peaje
-from app.models.ruta_peaje import RutaPeaje
+from app.models.tramo_peaje import TramoPeaje
+from app.models.ruta_peaje import RutaPeaje  # Deprecated - mantener por compatibilidad
 
 from app.models.marca_vehiculo import MarcaVehiculo
 from app.models.configuracion_vehiculo import ConfiguracionVehiculo
@@ -14,3 +15,4 @@ from app.models.vehiculo import Vehiculo
 from app.models.rendimiento_configuracion import RendimientoConfiguracion
 
 from app.models.configuracion import ConfiguracionGeneral
+from app.models.usuario import Usuario

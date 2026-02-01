@@ -4,11 +4,13 @@ from sqlalchemy import func
 
 from app.database.session import get_db
 from app.models.configuracion import ConfiguracionGeneral
+from app.models.usuario import Usuario
 from app.schemas.configuracion import (
     ConfiguracionCreate,
     ConfiguracionUpdate,
     ConfiguracionResponse
 )
+from app.auth import get_current_user, require_permission
 
 router = APIRouter(
     prefix="/configuracion",
@@ -23,6 +25,7 @@ router = APIRouter(
 @router.get("/{clave}", response_model=ConfiguracionResponse)
 def obtener_configuracion(
     clave: str,
+    current_user: Usuario = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -45,7 +48,10 @@ def obtener_configuracion(
 
 
 @router.get("/", response_model=list[ConfiguracionResponse])
-def listar_configuraciones(db: Session = Depends(get_db)):
+def listar_configuraciones(
+    current_user: Usuario = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """
     Lista TODAS las configuraciones del sistema.
     
@@ -65,6 +71,7 @@ def listar_configuraciones(db: Session = Depends(get_db)):
 )
 def crear_configuracion(
     config: ConfiguracionCreate,
+    current_user: Usuario = Depends(require_permission("editar_configuracion")),
     db: Session = Depends(get_db)
 ):
     """
@@ -108,6 +115,7 @@ def crear_configuracion(
 def actualizar_configuracion(
     clave: str,
     config_update: ConfiguracionUpdate,
+    current_user: Usuario = Depends(require_permission("editar_configuracion")),
     db: Session = Depends(get_db)
 ):
     """
@@ -151,6 +159,7 @@ def actualizar_configuracion(
 @router.delete("/{clave}", status_code=status.HTTP_204_NO_CONTENT)
 def eliminar_configuracion(
     clave: str,
+    current_user: Usuario = Depends(require_permission("editar_configuracion")),
     db: Session = Depends(get_db)
 ):
     """

@@ -6,8 +6,10 @@ from decimal import Decimal
 from app.database.session import get_db
 from app.models.rendimiento_configuracion import RendimientoConfiguracion
 from app.models.configuracion_vehiculo import ConfiguracionVehiculo
+from app.models.usuario import Usuario
 from app.models.enums import TipoCarga, TipoTerreno, EstadoGeneral
 from app.schemas.rendimiento_configuracion import RendimientoConfiguracionResponse
+from app.auth import get_current_user, require_permission
 
 router = APIRouter(
     prefix="/rendimiento-configuracion",
@@ -36,6 +38,7 @@ class RendimientoConfiguracionUpdate(BaseModel):
 @router.get("/", response_model=list[RendimientoConfiguracionResponse], summary="Listar Rendimientos")
 def listar_rendimientos(
     incluir_inactivos: bool = False,
+    current_user: Usuario = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -59,6 +62,7 @@ def listar_rendimientos(
 def listar_rendimientos_por_configuracion(
     config_id: int,
     incluir_inactivos: bool = False,
+    current_user: Usuario = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -95,6 +99,7 @@ def listar_rendimientos_por_configuracion(
 @router.get("/{rendimiento_id}", response_model=RendimientoConfiguracionResponse, summary="Obtener Rendimiento")
 def obtener_rendimiento(
     rendimiento_id: int,
+    current_user: Usuario = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -126,6 +131,7 @@ def obtener_rendimiento(
 )
 def crear_rendimiento(
     rendimiento: RendimientoConfiguracionCreate,
+    current_user: Usuario = Depends(require_permission("crear_rendimiento")),
     db: Session = Depends(get_db)
 ):
     """
@@ -190,6 +196,7 @@ def crear_rendimiento(
 def actualizar_rendimiento(
     rendimiento_id: int,
     rendimiento_update: RendimientoConfiguracionUpdate,
+    current_user: Usuario = Depends(require_permission("editar_rendimiento")),
     db: Session = Depends(get_db)
 ):
     """
@@ -230,6 +237,7 @@ def actualizar_rendimiento(
 @router.delete("/{rendimiento_id}", status_code=status.HTTP_204_NO_CONTENT)
 def eliminar_rendimiento(
     rendimiento_id: int,
+    current_user: Usuario = Depends(require_permission("eliminar_rendimiento")),
     db: Session = Depends(get_db)
 ):
     """

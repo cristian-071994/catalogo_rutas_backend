@@ -6,8 +6,10 @@ from pydantic import BaseModel
 from app.database.session import get_db
 from app.models.configuracion_vehiculo import ConfiguracionVehiculo
 from app.models.marca_vehiculo import MarcaVehiculo
+from app.models.usuario import Usuario
 from app.models.enums import EstadoGeneral
 from app.schemas.configuracion_vehiculo import ConfiguracionVehiculoResponse
+from app.auth import get_current_user, require_permission
 
 router = APIRouter(
     prefix="/configuracion-vehiculos",
@@ -35,6 +37,7 @@ class ConfiguracionVehiculoUpdate(BaseModel):
 @router.get("/", response_model=list[ConfiguracionVehiculoResponse], summary="Listar Configuraciones")
 def listar_configuraciones(
     incluir_inactivos: bool = False,
+    current_user: Usuario = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -57,6 +60,7 @@ def listar_configuraciones(
 @router.get("/{config_id}", response_model=ConfiguracionVehiculoResponse, summary="Obtener Configuración")
 def obtener_configuracion(
     config_id: int,
+    current_user: Usuario = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -89,6 +93,7 @@ def obtener_configuracion(
 )
 def crear_configuracion(
     config: ConfiguracionVehiculoCreate,
+    current_user: Usuario = Depends(require_permission("crear_configuracion_vehiculo")),
     db: Session = Depends(get_db)
 ):
     """
@@ -145,6 +150,7 @@ def crear_configuracion(
 def actualizar_configuracion(
     config_id: int,
     config_update: ConfiguracionVehiculoUpdate,
+    current_user: Usuario = Depends(require_permission("editar_configuracion_vehiculo")),
     db: Session = Depends(get_db)
 ):
     """
@@ -185,6 +191,7 @@ def actualizar_configuracion(
 @router.delete("/{config_id}", status_code=status.HTTP_204_NO_CONTENT)
 def eliminar_configuracion(
     config_id: int,
+    current_user: Usuario = Depends(require_permission("eliminar_configuracion_vehiculo")),
     db: Session = Depends(get_db)
 ):
     """

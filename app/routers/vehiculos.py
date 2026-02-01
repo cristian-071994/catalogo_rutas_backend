@@ -6,8 +6,10 @@ from pydantic import BaseModel
 from app.database.session import get_db
 from app.models.vehiculo import Vehiculo
 from app.models.configuracion_vehiculo import ConfiguracionVehiculo
+from app.models.usuario import Usuario
 from app.models.enums import EstadoGeneral
 from app.schemas.vehiculo import VehiculoResponse
+from app.auth import get_current_user, require_permission
 
 router = APIRouter(
     prefix="/vehiculos",
@@ -35,6 +37,7 @@ class VehiculoUpdate(BaseModel):
 @router.get("/", response_model=list[VehiculoResponse], summary="Listar Vehículos")
 def listar_vehiculos(
     incluir_inactivos: bool = False,
+    current_user: Usuario = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -57,6 +60,7 @@ def listar_vehiculos(
 @router.get("/{vehiculo_id}", response_model=VehiculoResponse, summary="Obtener Vehículo")
 def obtener_vehiculo(
     vehiculo_id: int,
+    current_user: Usuario = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -86,6 +90,7 @@ def obtener_vehiculo(
 )
 def crear_vehiculo(
     vehiculo: VehiculoCreate,
+    current_user: Usuario = Depends(require_permission("crear_vehiculo")),
     db: Session = Depends(get_db)
 ):
     """
@@ -144,6 +149,7 @@ def crear_vehiculo(
 def actualizar_vehiculo(
     vehiculo_id: int,
     vehiculo_update: VehiculoUpdate,
+    current_user: Usuario = Depends(require_permission("editar_vehiculo")),
     db: Session = Depends(get_db)
 ):
     """
@@ -182,6 +188,7 @@ def actualizar_vehiculo(
 @router.delete("/{vehiculo_id}", status_code=status.HTTP_204_NO_CONTENT)
 def eliminar_vehiculo(
     vehiculo_id: int,
+    current_user: Usuario = Depends(require_permission("eliminar_vehiculo")),
     db: Session = Depends(get_db)
 ):
     """

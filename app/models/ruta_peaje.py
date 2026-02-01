@@ -6,6 +6,11 @@ from app.models.enums import DireccionPeaje
 
 
 class RutaPeaje(Base):
+    """
+    DEPRECATED: Esta tabla se mantiene por compatibilidad.
+    Usar TramoPeaje en su lugar.
+    Los peajes ahora pertenecen a tramos, no a rutas.
+    """
     __tablename__ = "ruta_peajes"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -24,7 +29,7 @@ class RutaPeaje(Base):
 
     orden = Column(Integer, nullable=True)
     
-    # NUEVO: Diferenciar ida vs regreso
+    # DEPRECATED: Ya no se usa ida/regreso
     direccion = Column(
         Enum(DireccionPeaje, name="direccion_peaje"),
         default=DireccionPeaje.IDA,
@@ -37,8 +42,9 @@ class RutaPeaje(Base):
         back_populates="peajes"
     )
 
+    # Nota: peaje ya no tiene back_populates a rutas, usar foreign_keys
     peaje = relationship(
         "Peaje",
-        back_populates="rutas"
+        foreign_keys=[peaje_id]
     )
 

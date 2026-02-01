@@ -6,7 +6,6 @@ from typing import Optional, List
 from app.models.ruta import Ruta
 from app.models.tramo_ruta import TramoRuta
 from app.models.tramo_detalle import TramoDetalle
-from app.models.ruta_peaje import RutaPeaje
 from app.models.peaje import Peaje
 from app.models.rendimiento_configuracion import RendimientoConfiguracion
 from app.models.enums import EstadoGeneral
@@ -302,24 +301,35 @@ def calcular_costo_ruta_detallado(
         )
         tramos_resumen.append(tramo_resumen)
 
-    # Obtener peajes
-    peajes_ruta = db.query(RutaPeaje).filter(
-        RutaPeaje.ruta_id == ruta_id
-    ).all()
-
-    peajes_resumen = []
+    # NUEVO: Obtener peajes de TODOS los tramos de la ruta (sin duplicados)
+    from app.models.tramo_peaje import TramoPeaje
+    
+    peajes_unicos = {}  # dict para evitar duplicados: {peaje_id: peaje}
     costo_peajes = Decimal(0)
+    
+    # Recorrer todos los tramos de la ruta
+    for tramo_ruta in tramos_ruta:
+        # Obtener peajes del tramo
+        tramos_peajes = db.query(TramoPeaje).filter(
+            TramoPeaje.tramo_id == tramo_ruta.tramo_id
+        ).all()
+        
+        # Agregar peajes únicos
+        for tramo_peaje in tramos_peajes:
+            peaje = tramo_peaje.peaje
+            if peaje.id not in peajes_unicos and peaje.estado == EstadoGeneral.activo:
+                peajes_unicos[peaje.id] = peaje
+                costo_peajes += peaje.costo
 
-    for ruta_peaje in peajes_ruta:
-        peaje = ruta_peaje.peaje
-        costo_peajes += peaje.costo
-
+    # Convertir dict a lista de resúmenes
+    peajes_resumen = []
+    for peaje in peajes_unicos.values():
         peaje_resumen = PeajeResumen(
             peaje_id=peaje.id,
-            nombre=peaje.nombre,
+            nombre=peaje.nombre_peaje,  # Actualizado: nombre_peaje
             costo=peaje.costo,
-            direccion=ruta_peaje.direccion.value,
-            orden=ruta_peaje.orden,
+            direccion="AMBAS",  # Ya no hay concepto de ida/regreso
+            orden=None,  # Ya no hay orden
         )
         peajes_resumen.append(peaje_resumen)
 
