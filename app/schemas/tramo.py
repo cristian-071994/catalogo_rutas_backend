@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 from typing import List, Optional
 from app.schemas.tramo_detalle import TramoDetalleResponse
 from app.schemas.peaje import PeajeResponse
@@ -19,13 +19,10 @@ class TramoUpdate(BaseModel):
 
 class TramoResponse(BaseModel):
     """Schema de respuesta de tramo con detalles y peajes"""
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
     id: int
     origen: str
     destino: str
     detalles: List[TramoDetalleResponse]
-    peajes_list: List[PeajeResponse] = []  # Peajes asociados a este tramo
-
-    class Config:
-        from_attributes = True
-        # Permite usar propiedades del modelo
-        allow_population_by_field_name = True
+    peajes: List[PeajeResponse] = Field(default_factory=list, alias="peajes_list")

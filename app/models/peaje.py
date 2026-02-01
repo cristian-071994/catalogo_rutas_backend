@@ -16,6 +16,9 @@ class Peaje(Base):
     
     # Datos de API oficial
     nombre_peaje = Column(String(200), nullable=False, index=True)
+    id_peaje_api = Column(String(20))
+    categoria_tarifa = Column(String(10))
+    fecha_ultima_tarifa = Column(DateTime)
     
     # Ubicación
     ubicacion = Column(String(200))  # Ej: "Mediacanoa - Ansermanuevo"

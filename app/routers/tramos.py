@@ -9,7 +9,7 @@ from app.models.tramo import Tramo
 from app.models.peaje import Peaje
 from app.models.tramo_peaje import TramoPeaje
 from app.models.usuario import Usuario
-from app.schemas.tramo import TramoResponse, TramoCreate
+from app.schemas.tramo import TramoResponse, TramoCreate, TramoUpdate
 from app.models.enums import EstadoGeneral
 from app.auth import get_current_user, require_permission
 
@@ -163,6 +163,75 @@ def crear_tramo(
 
 
 # ============================================
+# ACTUALIZAR TRAMO
+# ============================================
+
+@router.put(
+    "/{tramo_id}",
+    response_model=TramoResponse,
+    summary="Actualizar Tramo"
+)
+def actualizar_tramo(
+    tramo_id: int,
+    tramo_update: TramoUpdate,
+    current_user: Usuario = Depends(require_permission("editar_tramo")),
+    db: Session = Depends(get_db)
+):
+    """
+    Actualiza la información de un tramo existente.
+    
+    PUT /tramos/1
+    
+    Body (todos los campos son opcionales):
+    {
+        "origen": "Mediacanoa",
+        "destino": "Buenaventura"
+    }
+    
+    ⚠️ No puede cambiar origen+destino a valores que ya existan en otro tramo activo
+    """
+    # Validar que el tramo exista
+    tramo = db.query(Tramo).filter(Tramo.id == tramo_id).first()
+    
+    if not tramo:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tramo no encontrado"
+        )
+    
+    # Si cambian origen o destino, validar que no exista otro tramo con esa combinación
+    if tramo_update.origen or tramo_update.destino:
+        nuevo_origen = tramo_update.origen or tramo.origen
+        nuevo_destino = tramo_update.destino or tramo.destino
+        
+        # Validar que la nueva combinación sea única (case-insensitive)
+        existente = db.query(Tramo).filter(
+            func.lower(Tramo.origen) == func.lower(nuevo_origen),
+            func.lower(Tramo.destino) == func.lower(nuevo_destino),
+            Tramo.estado == EstadoGeneral.activo,
+            Tramo.id != tramo_id  # Excluir el tramo actual
+        ).first()
+        
+        if existente:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Ya existe un tramo de {nuevo_origen} a {nuevo_destino}"
+            )
+    
+    # Actualizar solo los campos que se enviaron
+    actualizar_datos = tramo_update.model_dump(exclude_unset=True)
+    
+    for campo, valor in actualizar_datos.items():
+        setattr(tramo, campo, valor)
+    
+    db.add(tramo)
+    db.commit()
+    db.refresh(tramo)
+    
+    return tramo
+
+
+# ============================================
 # GESTIÓN DE PEAJES EN TRAMOS
 # ============================================
 
@@ -296,6 +365,40 @@ def quitar_peaje_de_tramo(
         )
     
     db.delete(tramo_peaje)
+    db.commit()
+    
+    return None
+
+
+# ============================================
+# ELIMINAR TRAMO (Soft Delete)
+# ============================================
+
+@router.delete("/{tramo_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Eliminar Tramo")
+def eliminar_tramo(
+    tramo_id: int,
+    current_user: Usuario = Depends(require_permission("eliminar_tramo")),
+    db: Session = Depends(get_db)
+):
+    """
+    Marca un tramo como inactivo (eliminación lógica).
+    
+    DELETE /tramos/1
+    
+    ⚠️ El tramo no se elimina de la BD, solo se marca como inactivo
+    """
+    # Validar que el tramo exista
+    tramo = db.query(Tramo).filter(Tramo.id == tramo_id).first()
+    
+    if not tramo:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tramo no encontrado"
+        )
+    
+    # Realizar soft delete
+    tramo.estado = EstadoGeneral.inactivo
+    db.add(tramo)
     db.commit()
     
     return None

@@ -40,6 +40,9 @@ class PeajeResponse(PeajeBase):
     sector: Optional[str] = None
     longitud: Optional[Decimal] = None
     latitud: Optional[Decimal] = None
+    id_peaje_api: Optional[str] = None
+    categoria_tarifa: Optional[str] = None
+    fecha_ultima_tarifa: Optional[datetime] = None
     codigo_peaje: Optional[str] = None
     codigo_tramo: Optional[str] = None
     fuente: Optional[str] = None

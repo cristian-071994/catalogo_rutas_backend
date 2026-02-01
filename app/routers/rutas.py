@@ -7,6 +7,7 @@ from app.database.session import get_db
 from app.models.ruta import Ruta
 from app.models.cliente import Cliente
 from app.models.tramo_ruta import TramoRuta
+from app.models.vehiculo import Vehiculo
 from app.models.tramo import Tramo
 from app.models.ruta_peaje import RutaPeaje
 from app.models.peaje import Peaje
@@ -172,7 +173,7 @@ def agregar_tramo_a_ruta(
 @router.get("/{ruta_id}/resumen")
 def obtener_resumen_ruta(
     ruta_id: int,
-    configuracion_id: int,
+    vehiculo_id: int,
     precio_galon: Decimal = None,
     current_user: Usuario = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -180,12 +181,12 @@ def obtener_resumen_ruta(
     """
     ENDPOINT PRINCIPAL: Obtiene el resumen DETALLADO de costos de una ruta.
     
-    GET /rutas/1/resumen?configuracion_id=1&precio_galon=9500
+    GET /rutas/1/resumen?vehiculo_id=1&precio_galon=9500
     
     Retorna información desmenuzada:
     - Por cada detalle de tramo: km, rendimiento, galones
     - Por cada tramo: total km y galones
-    - Por cada peaje: nombre, costo, dirección
+    - Por cada peaje: nombre, costo, sector
     - Resumen final: galones y costos totales
     """
     
@@ -204,11 +205,23 @@ def obtener_resumen_ruta(
         
         precio_galon = Decimal(config.valor)
 
+    # Validar vehículo
+    vehiculo = db.query(Vehiculo).filter(
+        Vehiculo.id == vehiculo_id,
+        Vehiculo.estado == EstadoGeneral.activo
+    ).first()
+
+    if not vehiculo:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Vehículo no encontrado o inactivo"
+        )
+
     # Calcular costo detallado
     resumen = calcular_costo_ruta_detallado(
         db=db,
         ruta_id=ruta_id,
-        configuracion_id=configuracion_id,
+        vehiculo_id=vehiculo_id,
         precio_galon=precio_galon
     )
 

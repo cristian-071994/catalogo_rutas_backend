@@ -23,30 +23,14 @@ router = APIRouter(
 @router.post("/", response_model=ClienteResponse, summary="Crear Cliente")
 def crear_cliente(
     cliente: ClienteCreate,
-    current_user: Usuario = Depends(get_current_user),
+    current_user: Usuario = Depends(require_permission("crear_cliente")),
     db: Session = Depends(get_db)
 ):
     """
     Crea un nuevo cliente en el sistema.
     
-    ⚠️ Requiere autenticación
-    
-    Roles permitidos:
-    - admin (todo)
-    - supervisor (todo excepto delete)
-    - gestor_clientes (solo clientes)
+    ⚠️ Requiere autenticación y permiso: crear_cliente
     """
-    
-    # Validar permisos
-    if current_user.rol not in [
-        RolEnum.admin,
-        RolEnum.supervisor,
-        RolEnum.gestor_clientes
-    ]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="No tienes permiso para crear clientes"
-        )
     
     # Validar duplicado (case-insensitive)
     existente = db.query(Cliente).filter(
@@ -70,7 +54,7 @@ def crear_cliente(
 @router.get("/", response_model=list[ClienteResponse], summary="Listar Clientes")
 def listar_clientes(
     incluir_inactivos: bool = False,
-    current_user: Usuario = Depends(get_current_user),
+    current_user: Usuario = Depends(require_permission("ver_clientes")),
     db: Session = Depends(get_db)
 ):
     """
@@ -79,7 +63,7 @@ def listar_clientes(
     GET /clientes/
     GET /clientes/?incluir_inactivos=true  <- Para incluir inactivos (soporte)
     
-    ⚠️ Requiere autenticación
+    ⚠️ Requiere autenticación y permiso: ver_clientes
     
     Por defecto solo devuelve estado="activo".
     Agregue ?incluir_inactivos=true solo si necesita ver registros eliminados.
@@ -96,13 +80,13 @@ def listar_clientes(
 @router.get("/{cliente_id}", response_model=ClienteResponse, summary="Obtener Cliente")
 def obtener_cliente(
     cliente_id: int,
-    current_user: Usuario = Depends(get_current_user),
+    current_user: Usuario = Depends(require_permission("ver_clientes")),
     db: Session = Depends(get_db)
 ):
     """
     Obtiene un cliente específico por su ID.
     
-    ⚠️ Requiere autenticación
+    ⚠️ Requiere autenticación y permiso: ver_clientes
     """
     cliente = (
         db.query(Cliente)
@@ -128,18 +112,13 @@ def obtener_cliente(
 def actualizar_cliente(
     cliente_id: int,
     cliente_update: ClienteUpdate,
-    current_user: Usuario = Depends(get_current_user),
+    current_user: Usuario = Depends(require_permission("editar_cliente")),
     db: Session = Depends(get_db)
 ):
     """
     Actualiza la información de un cliente existente.
 
-    ⚠️ Requiere autenticación
-    
-    Roles permitidos:
-    - admin (todo)
-    - supervisor (todo excepto delete)
-    - gestor_clientes (solo clientes)
+    ⚠️ Requiere autenticación y permiso: editar_cliente
 
     PUT /clientes/1
     Body:
@@ -147,17 +126,6 @@ def actualizar_cliente(
         "nombre": "Cliente Actualizado"
     }
     """
-    
-    # Validar permisos
-    if current_user.rol not in [
-        RolEnum.admin,
-        RolEnum.supervisor,
-        RolEnum.gestor_clientes
-    ]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="No tienes permiso para actualizar clientes"
-        )
 
     cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
 
@@ -197,37 +165,16 @@ def actualizar_cliente(
 @router.delete("/{cliente_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Eliminar Cliente")
 def eliminar_cliente(
     cliente_id: int,
-    current_user: Usuario = Depends(get_current_user),
+    current_user: Usuario = Depends(require_permission("eliminar_cliente")),
     db: Session = Depends(get_db)
 ):
     """
     Marca un cliente como inactivo (eliminación lógica).
 
-    ⚠️ Requiere autenticación
-    
-    Roles permitidos:
-    - admin (todo)
-    - supervisor (NO puede usar DELETE - solo crear/actualizar)
-    - gestor_clientes (solo clientes)
+    ⚠️ Requiere autenticación y permiso: eliminar_cliente
 
     DELETE /clientes/1
     """
-    
-    # Validar permisos - supervisor NO puede eliminar
-    if current_user.rol == RolEnum.supervisor:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Los supervisores no tienen permiso para eliminar (soft delete)"
-        )
-    
-    if current_user.rol not in [
-        RolEnum.admin,
-        RolEnum.gestor_clientes
-    ]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="No tienes permiso para eliminar clientes"
-        )
 
     cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
 

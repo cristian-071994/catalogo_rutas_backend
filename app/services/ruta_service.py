@@ -8,6 +8,7 @@ from app.models.tramo_ruta import TramoRuta
 from app.models.tramo_detalle import TramoDetalle
 from app.models.peaje import Peaje
 from app.models.rendimiento_configuracion import RendimientoConfiguracion
+from app.models.vehiculo import Vehiculo
 from app.models.enums import EstadoGeneral
 
 
@@ -27,9 +28,9 @@ class DetalleTramoResumen:
     ):
         self.tipo_carga = tipo_carga
         self.tipo_terreno = tipo_terreno
-        self.kilometros = float(kilometros)
-        self.rendimiento_km_galon = float(rendimiento_km_galon)
-        self.galones_necesarios = float(galones_necesarios)
+        self.kilometros = round(float(kilometros), 2)
+        self.rendimiento_km_galon = round(float(rendimiento_km_galon), 2)
+        self.galones_necesarios = round(float(galones_necesarios), 2)
 
     def to_dict(self):
         return {
@@ -52,14 +53,19 @@ class TramoResumen:
         km_totales: Decimal,
         galones_totales: Decimal,
         detalles: List[DetalleTramoResumen],
+        peajes: List = None,
+        costo_peajes: Decimal = Decimal(0),
     ):
         self.tramo_id = tramo_id
         self.origen = origen
         self.destino = destino
         self.orden = orden
-        self.km_totales = float(km_totales)
-        self.galones_totales = float(galones_totales)
+        self.km_totales = round(float(km_totales), 2)
+        self.galones_totales = round(float(galones_totales), 2)
         self.detalles = detalles
+        self.peajes = peajes or []
+        self.costo_peajes = round(float(costo_peajes), 2)
+        self.cantidad_peajes = len(self.peajes)
 
     def to_dict(self):
         return {
@@ -68,6 +74,9 @@ class TramoResumen:
             "orden": self.orden,
             "km_totales": self.km_totales,
             "galones_totales": self.galones_totales,
+            "cantidad_peajes": self.cantidad_peajes,
+            "costo_peajes": self.costo_peajes,
+            "peajes": [p.to_dict() for p in self.peajes],
             "detalles": [d.to_dict() for d in self.detalles],
         }
 
@@ -79,22 +88,19 @@ class PeajeResumen:
         peaje_id: int,
         nombre: str,
         costo: Decimal,
-        direccion: str,
-        orden: int,
+        sector: str = None,
     ):
         self.peaje_id = peaje_id
         self.nombre = nombre
-        self.costo = float(costo)
-        self.direccion = direccion
-        self.orden = orden
+        self.costo = round(float(costo), 2)
+        self.sector = sector
 
     def to_dict(self):
         return {
             "peaje_id": self.peaje_id,
             "nombre": self.nombre,
             "costo": self.costo,
-            "direccion": self.direccion,
-            "orden": self.orden,
+            "sector": self.sector,
         }
 
 
@@ -116,22 +122,24 @@ class ResumenRutaDetallado:
         config_marca: str,
         config_modelo: int,
         config_rendimientos: dict,
+        vehiculo_placa: str,
     ):
         self.ruta_id = ruta_id
         self.ruta_nombre = ruta_nombre
         self.cliente_nombre = cliente_nombre
-        self.km_totales = km_totales
-        self.galones_totales = galones_totales
-        self.costo_combustible = costo_combustible
-        self.costo_peajes = costo_peajes
+        self.km_totales = round(float(km_totales), 2)
+        self.galones_totales = round(float(galones_totales), 2)
+        self.costo_combustible = round(float(costo_combustible), 2)
+        self.costo_peajes = round(float(costo_peajes), 2)
         self.cantidad_peajes = cantidad_peajes
         self.tramos = tramos
         self.peajes = peajes
-        self.precio_galon = precio_galon
+        self.precio_galon = round(float(precio_galon), 2)
         self.config_marca = config_marca
         self.config_modelo = config_modelo
         self.config_rendimientos = config_rendimientos
-        self.costo_total = costo_combustible + costo_peajes
+        self.vehiculo_placa = vehiculo_placa
+        self.costo_total = round(self.costo_combustible + self.costo_peajes, 2)
 
     def to_dict(self):
         return {
@@ -140,31 +148,34 @@ class ResumenRutaDetallado:
                 "nombre": self.ruta_nombre,
                 "cliente": self.cliente_nombre,
             },
+            "vehiculo": {
+                "placa": self.vehiculo_placa,
+            },
             "configuracion_vehiculo": {
                 "marca": self.config_marca,
                 "modelo": self.config_modelo,
                 "rendimientos_configurados": self.config_rendimientos,
             },
             "resumen_distancia": {
-                "km_totales": float(self.km_totales),
+                "km_totales": self.km_totales,
             },
             "resumen_combustible": {
-                "precio_galon": float(self.precio_galon),
-                "galones_totales_requeridos": float(self.galones_totales),
-                "costo_total_combustible": float(self.costo_combustible),
+                "precio_galon": self.precio_galon,
+                "galones_totales_requeridos": self.galones_totales,
+                "costo_total_combustible": self.costo_combustible,
             },
             "resumen_peajes": {
                 "cantidad_peajes": self.cantidad_peajes,
-                "costo_total_peajes": float(self.costo_peajes),
+                "costo_total_peajes": self.costo_peajes,
                 "detalles_peajes": [p.to_dict() for p in self.peajes],
             },
             "tramos_detalle": [t.to_dict() for t in self.tramos],
             "costo_total_ruta": {
-                "km_totales": float(self.km_totales),
-                "galones_requeridos": float(self.galones_totales),
-                "costo_combustible": float(self.costo_combustible),
-                "costo_peajes": float(self.costo_peajes),
-                "costo_total": float(self.costo_total),
+                "km_totales": self.km_totales,
+                "galones_requeridos": self.galones_totales,
+                "costo_combustible": self.costo_combustible,
+                "costo_peajes": self.costo_peajes,
+                "costo_total": self.costo_total,
             },
         }
 
@@ -211,7 +222,7 @@ def obtener_costo_peajes(db: Session, ruta_id: int) -> tuple[Decimal, int]:
 def calcular_costo_ruta_detallado(
     db: Session,
     ruta_id: int,
-    configuracion_id: int,
+    vehiculo_id: int,
     precio_galon: Decimal
 ) -> Optional[ResumenRutaDetallado]:
     """
@@ -228,6 +239,17 @@ def calcular_costo_ruta_detallado(
     ruta = db.query(Ruta).filter(Ruta.id == ruta_id).first()
     if not ruta:
         return None
+
+    # Validar que el vehículo exista
+    vehiculo = db.query(Vehiculo).filter(
+        Vehiculo.id == vehiculo_id,
+        Vehiculo.estado == EstadoGeneral.activo
+    ).first()
+
+    if not vehiculo:
+        return None
+
+    configuracion_id = vehiculo.configuracion_id
 
     # Obtener todos los tramos de la ruta (en orden)
     tramos_ruta = db.query(TramoRuta).filter(
@@ -286,10 +308,35 @@ def calcular_costo_ruta_detallado(
             )
             detalles_resumen.append(detalle_resumen)
 
+        # ============================================
+        # OBTENER PEAJES DE ESTE TRAMO
+        # ============================================
+        from app.models.tramo_peaje import TramoPeaje
+        
+        tramos_peajes = db.query(TramoPeaje).filter(
+            TramoPeaje.tramo_id == tramo.id
+        ).all()
+        
+        peajes_tramo = []
+        costo_peajes_tramo = Decimal(0)
+        
+        for tramo_peaje in tramos_peajes:
+            peaje = tramo_peaje.peaje
+            if peaje.estado == EstadoGeneral.activo:
+                peaje_resumen = PeajeResumen(
+                    peaje_id=peaje.id,
+                    nombre=peaje.nombre_peaje,
+                    costo=peaje.costo,
+                    sector=peaje.sector,
+                )
+                peajes_tramo.append(peaje_resumen)
+                costo_peajes_tramo += peaje.costo
+
         # Agregar totales del tramo
         km_totales_ruta += km_tramo
         galones_totales_ruta += galones_tramo
 
+        # Crear resumen del tramo CON SUS PEAJES
         tramo_resumen = TramoResumen(
             tramo_id=tramo.id,
             origen=tramo.origen,
@@ -298,40 +345,28 @@ def calcular_costo_ruta_detallado(
             km_totales=km_tramo,
             galones_totales=galones_tramo,
             detalles=detalles_resumen,
+            peajes=peajes_tramo,
+            costo_peajes=costo_peajes_tramo,
         )
         tramos_resumen.append(tramo_resumen)
 
-    # NUEVO: Obtener peajes de TODOS los tramos de la ruta (sin duplicados)
-    from app.models.tramo_peaje import TramoPeaje
+    # ============================================
+    # OBTENER PEAJES ÚNICOS DE TODA LA RUTA
+    # ============================================
+    # ============================================
+    # CONSOLIDAR TODOS LOS PEAJES DE LA RUTA
+    # ============================================
+    # La ruta suma TODOS los peajes de TODOS los tramos
+    # Si un peaje aparece en varios tramos, se cuenta varias veces
     
-    peajes_unicos = {}  # dict para evitar duplicados: {peaje_id: peaje}
-    costo_peajes = Decimal(0)
+    peajes_totales_ruta = []
+    costo_peajes_total = Decimal(0)
     
-    # Recorrer todos los tramos de la ruta
-    for tramo_ruta in tramos_ruta:
-        # Obtener peajes del tramo
-        tramos_peajes = db.query(TramoPeaje).filter(
-            TramoPeaje.tramo_id == tramo_ruta.tramo_id
-        ).all()
-        
-        # Agregar peajes únicos
-        for tramo_peaje in tramos_peajes:
-            peaje = tramo_peaje.peaje
-            if peaje.id not in peajes_unicos and peaje.estado == EstadoGeneral.activo:
-                peajes_unicos[peaje.id] = peaje
-                costo_peajes += peaje.costo
-
-    # Convertir dict a lista de resúmenes
-    peajes_resumen = []
-    for peaje in peajes_unicos.values():
-        peaje_resumen = PeajeResumen(
-            peaje_id=peaje.id,
-            nombre=peaje.nombre_peaje,  # Actualizado: nombre_peaje
-            costo=peaje.costo,
-            direccion="AMBAS",  # Ya no hay concepto de ida/regreso
-            orden=None,  # Ya no hay orden
-        )
-        peajes_resumen.append(peaje_resumen)
+    # Recorrer todos los tramos y sumar TODOS sus peajes
+    for tramo_resumen in tramos_resumen:
+        for peaje_info in tramo_resumen.peajes:
+            peajes_totales_ruta.append(peaje_info)
+            costo_peajes_total += Decimal(peaje_info.costo)
 
     # Calcular costo combustible
     costo_combustible = galones_totales_ruta * precio_galon
@@ -374,14 +409,15 @@ def calcular_costo_ruta_detallado(
         km_totales=km_totales_ruta,
         galones_totales=galones_totales_ruta,
         costo_combustible=costo_combustible,
-        costo_peajes=costo_peajes,
-        cantidad_peajes=len(peajes_ruta),
+        costo_peajes=costo_peajes_total,
+        cantidad_peajes=len(peajes_totales_ruta),
         tramos=tramos_resumen,
-        peajes=peajes_resumen,
+        peajes=peajes_totales_ruta,
         precio_galon=precio_galon,
         config_marca=config_marca,
         config_modelo=config_modelo,
         config_rendimientos=config_rendimientos,
+        vehiculo_placa=vehiculo.placa,
     )
 
     return resumen

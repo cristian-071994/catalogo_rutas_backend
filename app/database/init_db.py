@@ -35,44 +35,98 @@ def _create_system_roles_and_permissions():
     
     db = SessionLocal()
     try:
-        # Definir permisos del sistema
+        # Definir permisos del sistema (45 permisos en total)
         PERMISOS_DEL_SISTEMA = [
-            # Usuarios
+            # ========================================
+            # USUARIOS
+            # ========================================
             ("crear_usuario", "Crear nuevos usuarios", "usuarios"),
             ("editar_usuario", "Editar información de usuarios", "usuarios"),
             ("eliminar_usuario", "Eliminar usuarios", "usuarios"),
             ("ver_usuarios", "Ver lista de usuarios", "usuarios"),
             ("cambiar_rol_usuario", "Cambiar rol de un usuario", "usuarios"),
             
-            # Roles y Permisos
+            # ========================================
+            # ROLES Y PERMISOS
+            # ========================================
             ("gestionar_roles", "Crear, editar y eliminar roles", "roles"),
             ("gestionar_permisos", "Crear, editar y eliminar permisos", "permisos"),
             
-            # Rutas
-            ("crear_ruta", "Crear nuevas rutas", "rutas"),
-            ("editar_ruta", "Editar rutas existentes", "rutas"),
-            ("eliminar_ruta", "Eliminar rutas", "rutas"),
-            ("ver_rutas", "Ver lista de rutas", "rutas"),
-            
-            # Peajes
-            ("crear_peaje", "Crear nuevos peajes", "peajes"),
-            ("editar_peaje", "Editar peajes existentes", "peajes"),
-            ("eliminar_peaje", "Eliminar peajes", "peajes"),
-            ("ver_peajes", "Ver lista de peajes", "peajes"),
-            
-            # Clientes
+            # ========================================
+            # CLIENTES
+            # ========================================
             ("crear_cliente", "Crear nuevos clientes", "clientes"),
             ("editar_cliente", "Editar clientes existentes", "clientes"),
             ("eliminar_cliente", "Eliminar clientes", "clientes"),
             ("ver_clientes", "Ver lista de clientes", "clientes"),
             
-            # Vehículos
+            # ========================================
+            # RUTAS
+            # ========================================
+            ("crear_ruta", "Crear nuevas rutas", "rutas"),
+            ("editar_ruta", "Editar rutas existentes", "rutas"),
+            ("eliminar_ruta", "Eliminar rutas", "rutas"),
+            ("ver_rutas", "Ver lista de rutas", "rutas"),
+            
+            # ========================================
+            # TRAMOS
+            # ========================================
+            ("crear_tramo", "Crear nuevos tramos", "tramos"),
+            ("editar_tramo", "Editar tramos existentes", "tramos"),
+            ("eliminar_tramo", "Eliminar tramos", "tramos"),
+            ("ver_tramos", "Ver lista de tramos", "tramos"),
+            
+            # ========================================
+            # TRAMO DETALLE
+            # ========================================
+            ("crear_tramo_detalle", "Crear detalles de tramos", "tramo_detalle"),
+            ("editar_tramo_detalle", "Editar detalles de tramos", "tramo_detalle"),
+            ("eliminar_tramo_detalle", "Eliminar detalles de tramos", "tramo_detalle"),
+            ("ver_tramo_detalle", "Ver detalles de tramos", "tramo_detalle"),
+            
+            # ========================================
+            # PEAJES
+            # ========================================
+            ("crear_peaje", "Crear nuevos peajes", "peajes"),
+            ("editar_peaje", "Editar peajes existentes", "peajes"),
+            ("eliminar_peaje", "Eliminar peajes", "peajes"),
+            ("ver_peajes", "Ver lista de peajes", "peajes"),
+            
+            # ========================================
+            # VEHÍCULOS
+            # ========================================
             ("crear_vehiculo", "Crear nuevos vehículos", "vehiculos"),
             ("editar_vehiculo", "Editar vehículos existentes", "vehiculos"),
             ("eliminar_vehiculo", "Eliminar vehículos", "vehiculos"),
             ("ver_vehiculos", "Ver lista de vehículos", "vehiculos"),
             
-            # Configuración
+            # ========================================
+            # MARCAS DE VEHÍCULOS
+            # ========================================
+            ("crear_marca", "Crear nuevas marcas de vehículos", "marcas_vehiculos"),
+            ("editar_marca", "Editar marcas de vehículos", "marcas_vehiculos"),
+            ("eliminar_marca", "Eliminar marcas de vehículos", "marcas_vehiculos"),
+            ("ver_marcas", "Ver lista de marcas de vehículos", "marcas_vehiculos"),
+            
+            # ========================================
+            # CONFIGURACIÓN DE VEHÍCULOS
+            # ========================================
+            ("crear_configuracion_vehiculo", "Crear configuraciones de vehículos", "configuracion_vehiculos"),
+            ("editar_configuracion_vehiculo", "Editar configuraciones de vehículos", "configuracion_vehiculos"),
+            ("eliminar_configuracion_vehiculo", "Eliminar configuraciones de vehículos", "configuracion_vehiculos"),
+            ("ver_configuracion_vehiculos", "Ver configuraciones de vehículos", "configuracion_vehiculos"),
+            
+            # ========================================
+            # RENDIMIENTO
+            # ========================================
+            ("crear_rendimiento", "Crear configuraciones de rendimiento", "rendimiento"),
+            ("editar_rendimiento", "Editar configuraciones de rendimiento", "rendimiento"),
+            ("eliminar_rendimiento", "Eliminar configuraciones de rendimiento", "rendimiento"),
+            ("ver_rendimiento", "Ver configuraciones de rendimiento", "rendimiento"),
+            
+            # ========================================
+            # CONFIGURACIÓN Y REPORTES
+            # ========================================
             ("editar_configuracion", "Editar configuración general del sistema", "configuracion"),
             ("ver_reportes", "Ver reportes y análisis", "reportes"),
         ]

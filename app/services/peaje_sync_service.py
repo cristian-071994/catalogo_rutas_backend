@@ -1,6 +1,6 @@
 """
-Servicio de sincronización de peajes desde API oficial del gobierno
-https://www.datos.gov.co/resource/68qj-5xux.json
+Servicio de sincronización de peajes desde API oficial (ANI)
+https://www.datos.gov.co/resource/7gj8-j6i3.json
 """
 import httpx
 from datetime import datetime
@@ -12,8 +12,9 @@ from app.models.peaje import Peaje
 from app.models.enums import EstadoGeneral
 
 
-API_URL = "https://www.datos.gov.co/resource/68qj-5xux.json"
+API_URL = "https://www.datos.gov.co/resource/7gj8-j6i3.json"
 TIMEOUT = 60.0  # segundos
+PAGE_LIMIT = 1000
 
 
 async def sincronizar_peajes_desde_api(db: Session) -> Dict:
@@ -22,95 +23,99 @@ async def sincronizar_peajes_desde_api(db: Session) -> Dict:
     Retorna resumen de la sincronización.
     """
     try:
-        # Descargar datos de la API
         async with httpx.AsyncClient(timeout=TIMEOUT) as client:
-            response = await client.get(API_URL, params={"$limit": 10000})
-            response.raise_for_status()
-            peajes_api = response.json()
-        
-        stats = {
-            "total_api": len(peajes_api),
-            "creados": 0,
-            "actualizados": 0,
-            "errores": 0,
-            "errores_detalle": []
-        }
-        
-        for peaje_data in peajes_api:
-            try:
-                # Extraer datos de la API
-                nombre_peaje = peaje_data.get("nombre_peaje", "").strip()
-                
-                # Validar que tenga nombre
-                if not nombre_peaje:
-                    stats["errores"] += 1
-                    continue
-                
-                # Extraer coordenadas
-                coordinates = peaje_data.get("point", {}).get("coordinates", [])
-                longitud = Decimal(str(coordinates[0])) if len(coordinates) > 0 else None
-                latitud = Decimal(str(coordinates[1])) if len(coordinates) > 1 else None
-                
-                # Extraer costo de categoría V (camiones)
-                categoria_v = peaje_data.get("categoria_v", "0")
-                try:
-                    costo = Decimal(str(categoria_v))
-                except (ValueError, TypeError):
-                    costo = Decimal("0")
-                
-                # Si el costo es 0, usar categoria_ii como fallback
-                if costo == 0:
-                    categoria_ii = peaje_data.get("categoria_ii", "0")
+            stats = {
+                "total_api": 0,
+                "filtrados_categoria_v": 0,
+                "creados": 0,
+                "actualizados": 0,
+                "errores": 0,
+                "errores_detalle": []
+            }
+
+            offset = 0
+            while True:
+                response = await client.get(
+                    API_URL,
+                    params={"$limit": PAGE_LIMIT, "$offset": offset}
+                )
+                response.raise_for_status()
+                peajes_api = response.json()
+
+                if not peajes_api:
+                    break
+
+                stats["total_api"] += len(peajes_api)
+
+                for peaje_data in peajes_api:
                     try:
-                        costo = Decimal(str(categoria_ii))
-                    except (ValueError, TypeError):
-                        costo = Decimal("0")
-                
-                # Verificar si el peaje ya existe (buscar por nombre_peaje O por nombre)
-                peaje_existente = db.query(Peaje).filter(
-                    (Peaje.nombre_peaje == nombre_peaje) | (Peaje.nombre == nombre_peaje)
-                ).first()
-                
-                if peaje_existente:
-                    # Actualizar peaje existente
-                    peaje_existente.nombre = nombre_peaje  # Compatibilidad con campo viejo
-                    peaje_existente.ubicacion = peaje_data.get("ubicaci_n", "")[:200]
-                    peaje_existente.sector = peaje_data.get("sector", "")[:200]
-                    peaje_existente.longitud = longitud
-                    peaje_existente.latitud = latitud
-                    peaje_existente.costo = costo
-                    peaje_existente.codigo_peaje = peaje_data.get("c_digo_peaje", "")[:20]
-                    peaje_existente.codigo_tramo = peaje_data.get("c_digo_tramo", "")[:20]
-                    peaje_existente.fuente = "API_GOBIERNO"
-                    peaje_existente.ultima_actualizacion = datetime.utcnow()
-                    peaje_existente.estado = EstadoGeneral.activo
-                    
-                    stats["actualizados"] += 1
-                else:
-                    # Crear nuevo peaje
-                    nuevo_peaje = Peaje(
-                        nombre=nombre_peaje,  # Compatibilidad con campo viejo
-                        nombre_peaje=nombre_peaje,
-                        ubicacion=peaje_data.get("ubicaci_n", "")[:200],
-                        sector=peaje_data.get("sector", "")[:200],
-                        longitud=longitud,
-                        latitud=latitud,
-                        costo=costo,
-                        codigo_peaje=peaje_data.get("c_digo_peaje", "")[:20],
-                        codigo_tramo=peaje_data.get("c_digo_tramo", "")[:20],
-                        fuente="API_GOBIERNO",
-                        ultima_actualizacion=datetime.utcnow(),
-                        estado=EstadoGeneral.activo
-                    )
-                    db.add(nuevo_peaje)
-                    stats["creados"] += 1
-                    
-            except Exception as e:
-                stats["errores"] += 1
-                stats["errores_detalle"].append({
-                    "peaje": peaje_data.get("nombre_peaje", "DESCONOCIDO"),
-                    "error": str(e)
-                })
+                        categoria = str(peaje_data.get("idcategoriatarifa", "")).strip().upper()
+                        if categoria != "V":
+                            continue
+
+                        stats["filtrados_categoria_v"] += 1
+
+                        nombre_raw = peaje_data.get("peaje", "")
+                        nombre_peaje = " ".join(str(nombre_raw).split()).strip()
+                        if not nombre_peaje:
+                            stats["errores"] += 1
+                            continue
+
+                        id_peaje_api = str(peaje_data.get("idpeaje", "")).strip()
+
+                        try:
+                            costo = Decimal(str(peaje_data.get("valor", "0")))
+                        except (ValueError, TypeError):
+                            costo = Decimal("0")
+
+                        fecha_str = peaje_data.get("ultimofechacambiopeaje")
+                        fecha_tarifa = None
+                        if fecha_str:
+                            try:
+                                fecha_tarifa = datetime.fromisoformat(str(fecha_str).replace("Z", ""))
+                            except ValueError:
+                                fecha_tarifa = None
+
+                        peaje_existente = db.query(Peaje).filter(
+                            (Peaje.id_peaje_api == id_peaje_api) |
+                            (Peaje.nombre_peaje == nombre_peaje) |
+                            (Peaje.nombre == nombre_peaje)
+                        ).first()
+
+                        if peaje_existente:
+                            peaje_existente.nombre = nombre_peaje
+                            peaje_existente.nombre_peaje = nombre_peaje
+                            peaje_existente.costo = costo
+                            peaje_existente.id_peaje_api = id_peaje_api
+                            peaje_existente.categoria_tarifa = categoria
+                            peaje_existente.fecha_ultima_tarifa = fecha_tarifa
+                            peaje_existente.fuente = "API_GOBIERNO"
+                            peaje_existente.ultima_actualizacion = datetime.utcnow()
+                            peaje_existente.estado = EstadoGeneral.activo
+                            stats["actualizados"] += 1
+                        else:
+                            nuevo_peaje = Peaje(
+                                nombre=nombre_peaje,
+                                nombre_peaje=nombre_peaje,
+                                costo=costo,
+                                id_peaje_api=id_peaje_api,
+                                categoria_tarifa=categoria,
+                                fecha_ultima_tarifa=fecha_tarifa,
+                                fuente="API_GOBIERNO",
+                                ultima_actualizacion=datetime.utcnow(),
+                                estado=EstadoGeneral.activo
+                            )
+                            db.add(nuevo_peaje)
+                            stats["creados"] += 1
+
+                    except Exception as e:
+                        stats["errores"] += 1
+                        stats["errores_detalle"].append({
+                            "peaje": peaje_data.get("peaje", "DESCONOCIDO"),
+                            "error": str(e)
+                        })
+
+                offset += PAGE_LIMIT
         
         # Guardar cambios
         db.commit()
@@ -154,84 +159,99 @@ def sincronizar_peajes_sync(db: Session) -> Dict:
     import requests
     
     try:
-        # Descargar datos de la API
-        response = requests.get(API_URL, params={"$limit": 10000}, timeout=TIMEOUT)
-        response.raise_for_status()
-        peajes_api = response.json()
-        
         stats = {
-            "total_api": len(peajes_api),
+            "total_api": 0,
+            "filtrados_categoria_v": 0,
             "creados": 0,
             "actualizados": 0,
             "errores": 0,
             "errores_detalle": []
         }
-        
-        for peaje_data in peajes_api:
-            try:
-                nombre_peaje = peaje_data.get("nombre_peaje", "").strip()
-                if not nombre_peaje:
-                    stats["errores"] += 1
-                    continue
-                
-                coordinates = peaje_data.get("point", {}).get("coordinates", [])
-                longitud = Decimal(str(coordinates[0])) if len(coordinates) > 0 else None
-                latitud = Decimal(str(coordinates[1])) if len(coordinates) > 1 else None
-                
-                categoria_v = peaje_data.get("categoria_v", "0")
+
+        offset = 0
+        while True:
+            response = requests.get(
+                API_URL,
+                params={"$limit": PAGE_LIMIT, "$offset": offset},
+                timeout=TIMEOUT
+            )
+            response.raise_for_status()
+            peajes_api = response.json()
+
+            if not peajes_api:
+                break
+
+            stats["total_api"] += len(peajes_api)
+
+            for peaje_data in peajes_api:
                 try:
-                    costo = Decimal(str(categoria_v))
-                except (ValueError, TypeError):
-                    costo = Decimal("0")
-                
-                if costo == 0:
-                    categoria_ii = peaje_data.get("categoria_ii", "0")
+                    categoria = str(peaje_data.get("idcategoriatarifa", "")).strip().upper()
+                    if categoria != "V":
+                        continue
+
+                    stats["filtrados_categoria_v"] += 1
+
+                    nombre_raw = peaje_data.get("peaje", "")
+                    nombre_peaje = " ".join(str(nombre_raw).split()).strip()
+                    if not nombre_peaje:
+                        stats["errores"] += 1
+                        continue
+
+                    id_peaje_api = str(peaje_data.get("idpeaje", "")).strip()
+
                     try:
-                        costo = Decimal(str(categoria_ii))
+                        costo = Decimal(str(peaje_data.get("valor", "0")))
                     except (ValueError, TypeError):
                         costo = Decimal("0")
-                
-                peaje_existente = db.query(Peaje).filter(
-                    (Peaje.nombre_peaje == nombre_peaje) | (Peaje.nombre == nombre_peaje)
-                ).first()
-                
-                if peaje_existente:
-                    peaje_existente.nombre = nombre_peaje  # Compatibilidad con campo viejo
-                    peaje_existente.ubicacion = peaje_data.get("ubicaci_n", "")[:200]
-                    peaje_existente.sector = peaje_data.get("sector", "")[:200]
-                    peaje_existente.longitud = longitud
-                    peaje_existente.latitud = latitud
-                    peaje_existente.costo = costo
-                    peaje_existente.codigo_peaje = peaje_data.get("c_digo_peaje", "")[:20]
-                    peaje_existente.codigo_tramo = peaje_data.get("c_digo_tramo", "")[:20]
-                    peaje_existente.fuente = "API_GOBIERNO"
-                    peaje_existente.ultima_actualizacion = datetime.utcnow()
-                    peaje_existente.estado = EstadoGeneral.activo
-                    stats["actualizados"] += 1
-                else:
-                    nuevo_peaje = Peaje(
-                        nombre=nombre_peaje,  # Compatibilidad con campo viejo
-                        nombre_peaje=nombre_peaje,
-                        ubicacion=peaje_data.get("ubicaci_n", "")[:200],
-                        sector=peaje_data.get("sector", "")[:200],
-                        longitud=longitud,
-                        latitud=latitud,
-                        costo=costo,
-                        codigo_peaje=peaje_data.get("c_digo_peaje", "")[:20],
-                        codigo_tramo=peaje_data.get("c_digo_tramo", "")[:20],
-                        fuente="API_GOBIERNO",
-                        ultima_actualizacion=datetime.utcnow(),
-                        estado=EstadoGeneral.activo
-                    )
-                    db.add(nuevo_peaje)
-                    stats["creados"] += 1
-                    
-            except Exception as e:
-                stats["errores"] += 1
-                stats["errores_detalle"].append({
-                    "peaje": peaje_data.get("nombre_peaje", "DESCONOCIDO"),
-                    "error": str(e)
-                })
+
+                    fecha_str = peaje_data.get("ultimofechacambiopeaje")
+                    fecha_tarifa = None
+                    if fecha_str:
+                        try:
+                            fecha_tarifa = datetime.fromisoformat(str(fecha_str).replace("Z", ""))
+                        except ValueError:
+                            fecha_tarifa = None
+
+                    peaje_existente = db.query(Peaje).filter(
+                        (Peaje.id_peaje_api == id_peaje_api) |
+                        (Peaje.nombre_peaje == nombre_peaje) |
+                        (Peaje.nombre == nombre_peaje)
+                    ).first()
+
+                    if peaje_existente:
+                        peaje_existente.nombre = nombre_peaje
+                        peaje_existente.nombre_peaje = nombre_peaje
+                        peaje_existente.costo = costo
+                        peaje_existente.id_peaje_api = id_peaje_api
+                        peaje_existente.categoria_tarifa = categoria
+                        peaje_existente.fecha_ultima_tarifa = fecha_tarifa
+                        peaje_existente.fuente = "API_GOBIERNO"
+                        peaje_existente.ultima_actualizacion = datetime.utcnow()
+                        peaje_existente.estado = EstadoGeneral.activo
+                        stats["actualizados"] += 1
+                    else:
+                        nuevo_peaje = Peaje(
+                            nombre=nombre_peaje,
+                            nombre_peaje=nombre_peaje,
+                            costo=costo,
+                            id_peaje_api=id_peaje_api,
+                            categoria_tarifa=categoria,
+                            fecha_ultima_tarifa=fecha_tarifa,
+                            fuente="API_GOBIERNO",
+                            ultima_actualizacion=datetime.utcnow(),
+                            estado=EstadoGeneral.activo
+                        )
+                        db.add(nuevo_peaje)
+                        stats["creados"] += 1
+
+                except Exception as e:
+                    stats["errores"] += 1
+                    stats["errores_detalle"].append({
+                        "peaje": peaje_data.get("peaje", "DESCONOCIDO"),
+                        "error": str(e)
+                    })
+
+            offset += PAGE_LIMIT
         
         db.commit()
         
