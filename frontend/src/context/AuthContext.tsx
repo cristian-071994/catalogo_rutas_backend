@@ -8,7 +8,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, nombre_completo: string) => Promise<void>;
+  register: (email: string, password: string, nombre_completo: string, empresa_nit: string) => Promise<{ mensaje: string }>;
   logout: () => void;
 }
 
@@ -40,8 +40,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const response: any = await api.login(email, password);
       
-      // Guardar token
+      // Guardar access token y refresh token
       localStorage.setItem('access_token', response.access_token);
+      localStorage.setItem('refresh_token', response.refresh_token);
       
       // Crear objeto usuario desde la respuesta del backend
       const usuario: Usuario = {
@@ -64,14 +65,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const register = async (email: string, password: string, nombre_completo: string) => {
+  const register = async (email: string, password: string, nombre_completo: string, empresa_nit: string) => {
     try {
-      const response: AuthResponse = await api.register(email, password, nombre_completo);
+      const response: any = await api.register(email, password, nombre_completo, empresa_nit);
       
-      localStorage.setItem('access_token', response.access_token);
-      localStorage.setItem('usuario', JSON.stringify(response.usuario));
-      
-      setUsuario(response.usuario);
+      // El registro NO hace login automático porque requiere aprobación
+      // Solo retornamos el mensaje de éxito
+      return {
+        mensaje: response.mensaje || 'Registro exitoso. Tu cuenta está pendiente de aprobación.'
+      };
     } catch (error) {
       console.error('Register error:', error);
       throw error;
@@ -80,6 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
     localStorage.removeItem('usuario');
     setUsuario(null);
   };

@@ -6,6 +6,8 @@ const API_URL = 'http://localhost:8000/api/v1';
 
 class ApiClient {
   private client: AxiosInstance;
+  private isRefreshing = false;
+  private refreshSubscribers: Array<(token: string) => void> = [];
 
   constructor() {
     this.client = axios.create({
@@ -24,18 +26,78 @@ class ApiClient {
       return config;
     });
 
-    // Interceptor para manejar errores
+    // Interceptor para manejar errores y refresh token automático
     this.client.interceptors.response.use(
       (response) => response,
-      (error) => {
-        if (error.response?.status === 401) {
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('usuario');
-          window.location.href = '/login';
+      async (error) => {
+        const originalRequest = error.config;
+
+        // Si es 401 y no es el endpoint de login/refresh
+        if (error.response?.status === 401 && !originalRequest._retry) {
+          if (originalRequest.url?.includes('/login') || originalRequest.url?.includes('/refresh')) {
+            // Si falla login o refresh, cerrar sesión
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            localStorage.removeItem('usuario');
+            window.location.href = '/login';
+            return Promise.reject(error);
+          }
+
+          originalRequest._retry = true;
+
+          if (!this.isRefreshing) {
+            this.isRefreshing = true;
+            const refreshToken = localStorage.getItem('refresh_token');
+
+            if (!refreshToken) {
+              localStorage.removeItem('access_token');
+              localStorage.removeItem('usuario');
+              window.location.href = '/login';
+              return Promise.reject(error);
+            }
+
+            try {
+              const response = await axios.post(`${API_URL}/refresh`, { refresh_token: refreshToken });
+              const { access_token, refresh_token: newRefreshToken } = response.data;
+
+              localStorage.setItem('access_token', access_token);
+              localStorage.setItem('refresh_token', newRefreshToken);
+
+              this.isRefreshing = false;
+              this.onRefreshed(access_token);
+              this.refreshSubscribers = [];
+
+              return this.client(originalRequest);
+            } catch (refreshError) {
+              this.isRefreshing = false;
+              localStorage.removeItem('access_token');
+              localStorage.removeItem('refresh_token');
+              localStorage.removeItem('usuario');
+              window.location.href = '/login';
+              return Promise.reject(refreshError);
+            }
+          }
+
+          // Esperar a que el refresh termine
+          return new Promise((resolve) => {
+            this.subscribeTokenRefresh((token: string) => {
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+              resolve(this.client(originalRequest));
+            });
+          });
         }
+
         return Promise.reject(error);
       }
     );
+  }
+
+  private subscribeTokenRefresh(cb: (token: string) => void) {
+    this.refreshSubscribers.push(cb);
+  }
+
+  private onRefreshed(token: string) {
+    this.refreshSubscribers.forEach((cb) => cb(token));
   }
 
   // Auth
@@ -47,11 +109,12 @@ class ApiClient {
     return response.data;
   }
 
-  async register(email: string, password: string, nombre_completo: string): Promise<AuthResponse> {
-    const response = await this.client.post<AuthResponse>('/auth/register', { //ojo *** revisar porque el endpoint es post /usuarios y solo se puede usar si hay acceso (token)
+  async register(email: string, password: string, nombre_completo: string, empresa_nit: string): Promise<any> {
+    const response = await this.client.post<any>('/registro', {
       email,
       password,
-      nombre_completo,
+      nombre: nombre_completo,
+      empresa_nit
     });
     return response.data;
   }
