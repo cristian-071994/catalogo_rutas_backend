@@ -51,6 +51,10 @@ def listar_vehiculos(
     """
     query = db.query(Vehiculo)
     
+    # Multi-tenancy: filtrar por empresa excepto super_admin
+    if current_user.rol and current_user.rol.nombre != "super_admin":
+        query = query.filter(Vehiculo.empresa_id == current_user.empresa_id)
+    
     if not incluir_inactivos:
         query = query.filter(Vehiculo.estado == EstadoGeneral.activo)
     
@@ -75,6 +79,14 @@ def obtener_vehiculo(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Vehículo no encontrado"
         )
+
+    # Multi-tenancy: verificar pertenencia a empresa excepto super_admin
+    if current_user.rol and current_user.rol.nombre != "super_admin":
+        if vehiculo.empresa_id != current_user.empresa_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes permiso para acceder a este recurso"
+            )
 
     return vehiculo
 
@@ -133,7 +145,10 @@ def crear_vehiculo(
         )
 
     # Crear
-    nuevo_vehiculo = Vehiculo(**vehiculo.model_dump())
+    nuevo_vehiculo = Vehiculo(
+        **vehiculo.model_dump(),
+        empresa_id=current_user.empresa_id  # Multi-tenancy: asignar empresa del usuario
+    )
     db.add(nuevo_vehiculo)
     db.commit()
     db.refresh(nuevo_vehiculo)
@@ -169,6 +184,14 @@ def actualizar_vehiculo(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Vehículo no encontrado"
         )
+
+    # Multi-tenancy: verificar pertenencia a empresa excepto super_admin
+    if current_user.rol and current_user.rol.nombre != "super_admin":
+        if vehiculo.empresa_id != current_user.empresa_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes permiso para acceder a este recurso"
+            )
 
     # Actualizar solo los campos enviados
     for campo, valor in vehiculo_update.model_dump(exclude_unset=True).items():
@@ -207,6 +230,14 @@ def eliminar_vehiculo(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Vehículo no encontrado"
         )
+
+    # Multi-tenancy: verificar pertenencia a empresa excepto super_admin
+    if current_user.rol and current_user.rol.nombre != "super_admin":
+        if vehiculo.empresa_id != current_user.empresa_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes permiso para acceder a este recurso"
+            )
 
     # Soft Delete: cambiar estado a inactivo
     vehiculo.estado = EstadoGeneral.inactivo

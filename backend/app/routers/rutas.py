@@ -42,12 +42,22 @@ def crear_ruta(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="El cliente especificado no existe"
         )
+    
+    # 2. Validar multi-tenancy: el cliente debe ser de la misma empresa
+    # Super admin puede asociar cualquier cliente
+    if current_user.rol and current_user.rol.nombre != "super_admin":
+        if cliente.empresa_id != current_user.empresa_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No puedes asociar clientes de otra empresa"
+            )
 
-    # 2. Crear la ruta
+    # 3. Crear la ruta
     nueva_ruta = Ruta(
         nombre=ruta.nombre,
         descripcion=ruta.descripcion,
-        cliente_id=ruta.cliente_id
+        cliente_id=ruta.cliente_id,
+        empresa_id=current_user.empresa_id  # Multi-tenancy: asignar empresa del usuario
     )
 
     db.add(nueva_ruta)
@@ -75,6 +85,10 @@ def listar_rutas(
     """
     query = db.query(Ruta)
     
+    # Multi-tenancy: filtrar por empresa excepto super_admin
+    if current_user.rol and current_user.rol.nombre != "super_admin":
+        query = query.filter(Ruta.empresa_id == current_user.empresa_id)
+    
     if not incluir_inactivos:
         query = query.filter(Ruta.estado == EstadoGeneral.activo)
     
@@ -96,6 +110,14 @@ def obtener_ruta(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Ruta no encontrada"
         )
+
+    # Multi-tenancy: verificar pertenencia a empresa excepto super_admin
+    if current_user.rol and current_user.rol.nombre != "super_admin":
+        if ruta.empresa_id != current_user.empresa_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes permiso para acceder a este recurso"
+            )
 
     return ruta
 
@@ -127,6 +149,14 @@ def agregar_tramo_a_ruta(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Ruta no encontrada"
         )
+
+    # Multi-tenancy: verificar pertenencia a empresa excepto super_admin
+    if current_user.rol and current_user.rol.nombre != "super_admin":
+        if ruta.empresa_id != current_user.empresa_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes permiso para acceder a este recurso"
+            )
 
     # Validar que el tramo exista
     tramo = db.query(Tramo).filter(Tramo.id == tramo_id).first()
@@ -217,6 +247,14 @@ def obtener_resumen_ruta(
             detail="Vehículo no encontrado o inactivo"
         )
 
+    # Multi-tenancy: verificar pertenencia a empresa excepto super_admin
+    if current_user.rol and current_user.rol.nombre != "super_admin":
+        if vehiculo.empresa_id != current_user.empresa_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes permiso para acceder a este vehículo"
+            )
+
     # Calcular costo detallado
     resumen = calcular_costo_ruta_detallado(
         db=db,
@@ -265,6 +303,14 @@ def actualizar_ruta(
             detail="Ruta no encontrada"
         )
 
+    # Multi-tenancy: verificar pertenencia a empresa excepto super_admin
+    if current_user.rol and current_user.rol.nombre != "super_admin":
+        if ruta.empresa_id != current_user.empresa_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes permiso para acceder a este recurso"
+            )
+
     # Actualizar solo los campos enviados
     for campo, valor in ruta_update.model_dump(exclude_unset=True).items():
         setattr(ruta, campo, valor)
@@ -304,6 +350,14 @@ def eliminar_ruta(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Ruta no encontrada"
         )
+
+    # Multi-tenancy: verificar pertenencia a empresa excepto super_admin
+    if current_user.rol and current_user.rol.nombre != "super_admin":
+        if ruta.empresa_id != current_user.empresa_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes permiso para acceder a este recurso"
+            )
 
     # Soft Delete: cambiar estado a inactivo
     ruta.estado = EstadoGeneral.inactivo
@@ -345,6 +399,10 @@ def listar_rutas_por_cliente(
 
     query = db.query(Ruta).filter(Ruta.cliente_id == cliente_id)
     
+    # Multi-tenancy: filtrar por empresa excepto super_admin
+    if current_user.rol and current_user.rol.nombre != "super_admin":
+        query = query.filter(Ruta.empresa_id == current_user.empresa_id)
+    
     if not incluir_inactivos:
         query = query.filter(Ruta.estado == EstadoGeneral.activo)
     
@@ -377,6 +435,14 @@ def eliminar_tramo_de_ruta(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Ruta no encontrada"
         )
+
+    # Multi-tenancy: verificar pertenencia a empresa excepto super_admin
+    if current_user.rol and current_user.rol.nombre != "super_admin":
+        if ruta.empresa_id != current_user.empresa_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes permiso para acceder a este recurso"
+            )
 
     # Obtener la relación TramoRuta
     tramo_ruta = db.query(TramoRuta).filter(

@@ -4,6 +4,7 @@ export interface Usuario {
   email: string;
   nombre_completo: string;
   activo: boolean;
+  empresa?: string;  // Nombre de la empresa
   rol: {
     id: number;
     nombre: string;
@@ -13,7 +14,9 @@ export interface Usuario {
 export interface AuthResponse {
   access_token: string;
   token_type: string;
-  usuario: Usuario;
+  usuario_nombre: string;  // Lo que realmente devuelve el backend
+  usuario_rol: string;     // Lo que realmente devuelve el backend
+  empresa_nombre: string;  // Nombre de la empresa
 }
 
 // Tipos de entidades

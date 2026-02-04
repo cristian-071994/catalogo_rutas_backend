@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, String, Numeric, DateTime
+from sqlalchemy import Column, Integer, String, Numeric, DateTime, ForeignKey
 from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
 
 from app.database.base import Base
 
@@ -19,7 +20,6 @@ class ConfiguracionGeneral(Base):
     clave = Column(
         String(50),
         nullable=False,
-        unique=True,
         index=True
     )
 
@@ -34,10 +34,21 @@ class ConfiguracionGeneral(Base):
         String(255),
         nullable=True
     )
+    
+    # Multi-tenancy: cada empresa tiene su propia configuración
+    empresa_id = Column(
+        Integer,
+        ForeignKey("empresas.id", ondelete="RESTRICT"),
+        nullable=True,  # NULL para super_admin
+        index=True
+    )
 
     # Cuándo se creó/actualizó
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, onupdate=func.now())
+    
+    # Relación
+    empresa = relationship("Empresa")
 
     def __repr__(self):
         return f"<ConfiguracionGeneral(clave={self.clave}, valor={self.valor})>"

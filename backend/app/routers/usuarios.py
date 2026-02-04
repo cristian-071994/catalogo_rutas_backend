@@ -5,7 +5,7 @@ Solo admin puede gestionar todos los usuarios
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, or_
 
 from app.database.session import get_db
@@ -29,6 +29,64 @@ router = APIRouter(
     prefix="/usuarios",
     tags=["Gestión de Usuarios"]
 )
+
+
+# ============================================
+# LISTAR USUARIOS PENDIENTES DE APROBACIÓN
+# ============================================
+
+@router.get(
+    "/pendientes",
+    response_model=UsuariosListaResponse,
+    summary="Listar Usuarios Pendientes de Aprobación"
+)
+def listar_usuarios_pendientes(
+    skip: int = Query(0, ge=0, description="Registros a saltar"),
+    limit: int = Query(10, ge=1, le=100, description="Límite de registros por página"),
+    current_user: Usuario = Depends(require_role("admin")),
+    db: Session = Depends(get_db)
+):
+    """
+    Lista usuarios pendientes de aprobación.
+    
+    ⚠️ Solo administradores
+    
+    Super admin ve todos los pendientes del sistema.
+    Admin solo ve pendientes de su empresa.
+    """
+    
+    # Construir query base
+    query = db.query(Usuario).options(
+        joinedload(Usuario.empresa),
+        joinedload(Usuario.rol)
+    ).filter(Usuario.aprobado == 0)
+    
+    # Multi-tenancy: Admin solo ve pendientes de su empresa
+    if current_user.rol and current_user.rol.nombre != "super_admin":
+        query = query.filter(Usuario.empresa_id == current_user.empresa_id)
+    
+    # Contar total
+    total = query.count()
+    
+    # Aplicar paginación
+    usuarios = query.order_by(Usuario.created_at.desc()).offset(skip).limit(limit).all()
+    
+    # Calcular metadatos
+    total_pages = (total + limit - 1) // limit
+    current_page = (skip // limit) + 1 if total > 0 else 1
+    has_next = (skip + limit) < total
+    has_prev = skip > 0
+    
+    return UsuariosListaResponse(
+        items=usuarios,
+        total=total,
+        skip=skip,
+        limit=limit,
+        total_pages=total_pages,
+        current_page=current_page,
+        has_next=has_next,
+        has_prev=has_prev
+    )
 
 
 # ============================================
@@ -78,8 +136,15 @@ def listar_usuarios(
             detail=f"sort_by inválido. Válidos: {', '.join(campos_validos)}"
         )
     
-    # Construir query base
-    query = db.query(Usuario)
+    # Construir query base con eager loading de relaciones
+    query = db.query(Usuario).options(
+        joinedload(Usuario.empresa),
+        joinedload(Usuario.rol)
+    )
+    
+    # Multi-tenancy: Super admin ve todos, admin solo ve usuarios de su empresa
+    if current_user.rol and current_user.rol.nombre != "super_admin":
+        query = query.filter(Usuario.empresa_id == current_user.empresa_id)
     
     # Aplicar filtros
     if search:
@@ -202,17 +267,10 @@ def obtener_usuario(
     """
     Obtiene un usuario específico por su ID.
     
-    ⚠️ Admin puede ver cualquier usuario
+    ⚠️ Super admin puede ver cualquier usuario
+    ⚠️ Admin puede ver usuarios de su empresa
     ⚠️ Usuarios comunes solo pueden ver su propio perfil
     """
-    # Si no es admin, solo puede ver su propio perfil
-    es_admin = current_user.rol and current_user.rol.nombre == "admin"
-    if not es_admin and current_user.id != usuario_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="No tienes permiso para ver este usuario"
-        )
-    
     usuario = db.query(Usuario).filter(Usuario.id == usuario_id).first()
     
     if not usuario:
@@ -221,7 +279,23 @@ def obtener_usuario(
             detail="Usuario no encontrado"
         )
     
-    return usuario
+    # Super admin puede ver cualquier usuario
+    if current_user.rol and current_user.rol.nombre == "super_admin":
+        return usuario
+    
+    # Admin puede ver usuarios de su empresa
+    es_admin = current_user.rol and current_user.rol.nombre == "admin"
+    if es_admin and usuario.empresa_id == current_user.empresa_id:
+        return usuario
+    
+    # Usuarios comunes solo ven su propio perfil
+    if current_user.id == usuario_id:
+        return usuario
+    
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="No tienes permiso para ver este usuario"
+    )
 
 
 # ============================================
@@ -280,13 +354,22 @@ def crear_usuario(
             detail=f"Rol '{usuario_data.rol}' no encontrado"
         )
     
-    # Crear el usuario
+    # Super admin no puede crear usuarios directamente sin asignar empresa
+    if current_user.empresa_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Super admin debe crear usuarios a través de la creación de empresas"
+        )
+    
+    # Crear el usuario con la empresa del admin actual
     nuevo_usuario = Usuario(
         nombre=usuario_data.nombre,
         email=usuario_data.email,
         password_hash=hash_password(usuario_data.password),
+        empresa_id=current_user.empresa_id,  # Asignar empresa del admin
         rol_id=rol.id,
-        activo=1
+        activo=1,
+        aprobado=1  # Auto-aprobado por admin
     )
     
     db.add(nuevo_usuario)
@@ -314,11 +397,12 @@ def actualizar_usuario(
     """
     Actualiza un usuario existente.
     
-    ⚠️ Admin puede editar cualquier usuario
+    ⚠️ Super admin puede editar cualquier usuario
+    ⚠️ Admin puede editar usuarios de su empresa
     ⚠️ Usuarios comunes solo pueden editar su propio perfil (excepto rol)
     
     **Restricciones:**
-    - Usuario común NO puede cambiar su propio rol (solo admin)
+    - Usuario común NO puede cambiar su propio rol (solo admin/super_admin)
     - Usuario común NO puede cambiar estado (activo/inactivo)
     - El email debe ser único si se intenta cambiar
     """
@@ -331,18 +415,37 @@ def actualizar_usuario(
             detail="Usuario no encontrado"
         )
     
+    # Validar que el usuario actual tenga rol
+    if not current_user.rol:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Usuario sin rol asignado"
+        )
+    
     # Validar permisos
+    es_super_admin = current_user.rol.nombre == "super_admin"
     es_admin = current_user.rol.nombre == "admin"
     es_su_perfil = current_user.id == usuario_id
     
-    if not es_admin and not es_su_perfil:
+    # Super admin puede editar cualquier usuario
+    if es_super_admin:
+        pass  # Permitir todo
+    # Admin solo puede editar usuarios de su empresa
+    elif es_admin:
+        if usuario.empresa_id != current_user.empresa_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Solo puedes editar usuarios de tu empresa"
+            )
+    # Usuarios comunes solo pueden editar su propio perfil
+    elif not es_su_perfil:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No tienes permiso para editar este usuario"
         )
     
-    # Si no es admin y está editando su perfil, no puede cambiar rol ni estado
-    if not es_admin and es_su_perfil:
+    # Si no es admin/super_admin y está editando su perfil, no puede cambiar rol ni estado
+    if not es_super_admin and not es_admin and es_su_perfil:
         if usuario_update.rol is not None:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -426,7 +529,16 @@ def eliminar_usuario(
             detail="Usuario no encontrado"
         )
     
-    # Protección: no permitir eliminar el último admin
+    # Super admin puede eliminar cualquier usuario
+    if current_user.rol and current_user.rol.nombre != "super_admin":
+        # Admin solo puede eliminar usuarios de su empresa
+        if usuario.empresa_id != current_user.empresa_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Solo puedes eliminar usuarios de tu empresa"
+            )
+    
+    # Protección: no permitir eliminar el último admin de una empresa
     if usuario.rol and usuario.rol.nombre == "admin":
         # Buscar el rol admin
         rol_admin = db.query(Rol).filter(Rol.nombre == "admin").first()

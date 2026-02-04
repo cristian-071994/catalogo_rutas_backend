@@ -35,7 +35,7 @@ router = APIRouter(
 )
 def listar_permisos(
     categoria: str | None = Query(None, description="Filtrar por categoría"),
-    current_user: Usuario = Depends(require_role("admin")),
+    current_user: Usuario = Depends(require_role("super_admin")),
     db: Session = Depends(get_db)
 ):
     """
@@ -44,7 +44,7 @@ def listar_permisos(
     **Parámetros opcionales:**
     - categoria: Filtrar por categoría (ej: "usuarios", "rutas", "peajes")
     
-    ⚠️ Solo administradores
+    ⚠️ Solo super administrador
     """
     query = db.query(Permiso)
     
@@ -66,13 +66,13 @@ def listar_permisos(
 )
 def obtener_permiso(
     permiso_id: int,
-    current_user: Usuario = Depends(require_role("admin")),
+    current_user: Usuario = Depends(require_role("super_admin")),
     db: Session = Depends(get_db)
 ):
     """
     Obtiene un permiso específico.
     
-    ⚠️ Solo administradores
+    ⚠️ Solo super administrador
     """
     permiso = db.query(Permiso).filter(Permiso.id == permiso_id).first()
     
@@ -97,13 +97,13 @@ def obtener_permiso(
 )
 def crear_permiso(
     permiso_data: PermisoCreate,
-    current_user: Usuario = Depends(require_role("admin")),
+    current_user: Usuario = Depends(require_role("super_admin")),
     db: Session = Depends(get_db)
 ):
     """
     Crea un nuevo permiso en el sistema.
     
-    ⚠️ Solo administradores
+    ⚠️ Solo super administrador
     
     **Validaciones:**
     - Nombre debe ser único
@@ -158,13 +158,13 @@ def crear_permiso(
 def actualizar_permiso(
     permiso_id: int,
     permiso_update: PermisoUpdate,
-    current_user: Usuario = Depends(require_role("admin")),
+    current_user: Usuario = Depends(require_role("super_admin")),
     db: Session = Depends(get_db)
 ):
     """
     Actualiza un permiso existente.
     
-    ⚠️ Solo administradores
+    ⚠️ Solo super administrador
     ⚠️ Los permisos del sistema no pueden ser editados
     """
     
@@ -222,13 +222,13 @@ def actualizar_permiso(
 )
 def eliminar_permiso(
     permiso_id: int,
-    current_user: Usuario = Depends(require_role("admin")),
+    current_user: Usuario = Depends(require_role("super_admin")),
     db: Session = Depends(get_db)
 ):
     """
     Elimina un permiso (soft delete - lo marca como inactivo).
     
-    ⚠️ Solo administradores
+    ⚠️ Solo super administrador
     ⚠️ Los permisos del sistema no pueden ser eliminados
     
     **Restricciones:**

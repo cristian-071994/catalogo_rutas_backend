@@ -196,11 +196,12 @@ def crear_rendimiento(
 def actualizar_rendimiento(
     rendimiento_id: int,
     rendimiento_update: RendimientoConfiguracionUpdate,
-    current_user: Usuario = Depends(require_permission("editar_rendimiento")),
+    current_user: Usuario = Depends(require_permission("super_admin")),
     db: Session = Depends(get_db)
 ):
     """
     Actualiza el rendimiento.
+    Solo super_admin puede actualizar rendimientos.
     
     PUT /rendimiento-configuracion/1
     Body:
@@ -237,11 +238,12 @@ def actualizar_rendimiento(
 @router.delete("/{rendimiento_id}", status_code=status.HTTP_204_NO_CONTENT)
 def eliminar_rendimiento(
     rendimiento_id: int,
-    current_user: Usuario = Depends(require_permission("eliminar_rendimiento")),
+    current_user: Usuario = Depends(require_permission("super_admin")),
     db: Session = Depends(get_db)
 ):
     """
     Marca un rendimiento como INACTIVO (soft delete).
+    Solo super_admin puede eliminar rendimientos.
     
     DELETE /rendimiento-configuracion/1
     

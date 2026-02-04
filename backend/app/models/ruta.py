@@ -10,6 +10,9 @@ class Ruta(Base):
     __tablename__ = "rutas"
 
     id = Column(Integer, primary_key=True, index=True)
+    
+    # Multi-tenancy: Empresa a la que pertenece esta ruta
+    empresa_id = Column(Integer, ForeignKey("empresas.id"), nullable=False, index=True)
 
     cliente_id = Column(Integer, ForeignKey("clientes.id"), nullable=False)
 
@@ -26,6 +29,7 @@ class Ruta(Base):
     updated_at = Column(DateTime, onupdate=func.now())
 
     # Relaciones
+    empresa = relationship("Empresa", back_populates="rutas")
     cliente = relationship("Cliente", back_populates="rutas")
 
     tramos = relationship(

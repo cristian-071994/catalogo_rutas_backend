@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { Usuario, AuthResponse } from '../types';
+import { createContext, useContext, useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
+import type { Usuario, AuthResponse } from '../types/index';
 import api from '../services/api';
 
 interface AuthContextType {
@@ -37,12 +38,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     try {
-      const response: AuthResponse = await api.login(email, password);
+      const response: any = await api.login(email, password);
       
+      // Guardar token
       localStorage.setItem('access_token', response.access_token);
-      localStorage.setItem('usuario', JSON.stringify(response.usuario));
       
-      setUsuario(response.usuario);
+      // Crear objeto usuario desde la respuesta del backend
+      const usuario: Usuario = {
+        id: 0, // Temporal, se obtiene del token o endpoint /me
+        email: email,
+        nombre_completo: response.usuario_nombre,
+        activo: true,
+        rol: {
+          id: 0,
+          nombre: response.usuario_rol
+        },
+        empresa: response.empresa_nombre  // Guardamos la empresa
+      };
+      
+      localStorage.setItem('usuario', JSON.stringify(usuario));
+      setUsuario(usuario);
     } catch (error) {
       console.error('Login error:', error);
       throw error;

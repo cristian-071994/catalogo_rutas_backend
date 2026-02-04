@@ -40,6 +40,10 @@ def listar_tramos(
     """
     query = db.query(Tramo)
     
+    # Multi-tenancy: filtrar por empresa excepto super_admin
+    if current_user.rol and current_user.rol.nombre != "super_admin":
+        query = query.filter(Tramo.empresa_id == current_user.empresa_id)
+    
     if not incluir_inactivos:
         query = query.filter(Tramo.estado == EstadoGeneral.activo)
     
@@ -64,6 +68,14 @@ def obtener_tramo(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Tramo no encontrado"
         )
+
+    # Multi-tenancy: verificar pertenencia a empresa excepto super_admin
+    if current_user.rol and current_user.rol.nombre != "super_admin":
+        if tramo.empresa_id != current_user.empresa_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes permiso para acceder a este recurso"
+            )
 
     return tramo
 
@@ -122,7 +134,8 @@ def crear_tramo(
     # Crear tramo
     nuevo_tramo = Tramo(
         origen=tramo.origen,
-        destino=tramo.destino
+        destino=tramo.destino,
+        empresa_id=current_user.empresa_id  # Multi-tenancy: asignar empresa del usuario
     )
     db.add(nuevo_tramo)
     db.flush()  # Flush para obtener el ID sin commit
@@ -199,6 +212,14 @@ def actualizar_tramo(
             detail="Tramo no encontrado"
         )
     
+    # Multi-tenancy: verificar pertenencia a empresa excepto super_admin
+    if current_user.rol and current_user.rol.nombre != "super_admin":
+        if tramo.empresa_id != current_user.empresa_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes permiso para acceder a este recurso"
+            )
+    
     # Si cambian origen o destino, validar que no exista otro tramo con esa combinación
     if tramo_update.origen or tramo_update.destino:
         nuevo_origen = tramo_update.origen or tramo.origen
@@ -259,6 +280,14 @@ def agregar_peaje_a_tramo(
             detail="Tramo no encontrado"
         )
     
+    # Multi-tenancy: verificar pertenencia a empresa excepto super_admin
+    if current_user.rol and current_user.rol.nombre != "super_admin":
+        if tramo.empresa_id != current_user.empresa_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes permiso para acceder a este recurso"
+            )
+    
     # Validar que el peaje exista
     peaje = db.query(Peaje).filter(Peaje.id == peaje_id).first()
     if not peaje:
@@ -315,6 +344,14 @@ def listar_peajes_de_tramo(
             detail="Tramo no encontrado"
         )
     
+    # Multi-tenancy: verificar pertenencia a empresa excepto super_admin
+    if current_user.rol and current_user.rol.nombre != "super_admin":
+        if tramo.empresa_id != current_user.empresa_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes permiso para acceder a este recurso"
+            )
+    
     # Obtener peajes del tramo
     tramos_peajes = db.query(TramoPeaje).filter(
         TramoPeaje.tramo_id == tramo_id
@@ -352,6 +389,22 @@ def quitar_peaje_de_tramo(
     
     DELETE /tramos/1/peajes/5
     """
+    # Validar que el tramo exista y pertenezca a la empresa
+    tramo = db.query(Tramo).filter(Tramo.id == tramo_id).first()
+    if not tramo:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tramo no encontrado"
+        )
+    
+    # Multi-tenancy: verificar pertenencia a empresa excepto super_admin
+    if current_user.rol and current_user.rol.nombre != "super_admin":
+        if tramo.empresa_id != current_user.empresa_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes permiso para acceder a este recurso"
+            )
+    
     # Buscar la asociación
     tramo_peaje = db.query(TramoPeaje).filter(
         TramoPeaje.tramo_id == tramo_id,
@@ -395,6 +448,14 @@ def eliminar_tramo(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Tramo no encontrado"
         )
+    
+    # Multi-tenancy: verificar pertenencia a empresa excepto super_admin
+    if current_user.rol and current_user.rol.nombre != "super_admin":
+        if tramo.empresa_id != current_user.empresa_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes permiso para acceder a este recurso"
+            )
     
     # Realizar soft delete
     tramo.estado = EstadoGeneral.inactivo

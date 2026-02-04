@@ -150,11 +150,12 @@ def crear_configuracion(
 def actualizar_configuracion(
     config_id: int,
     config_update: ConfiguracionVehiculoUpdate,
-    current_user: Usuario = Depends(require_permission("editar_configuracion_vehiculo")),
+    current_user: Usuario = Depends(require_permission("super_admin")),
     db: Session = Depends(get_db)
 ):
     """
     Actualiza una configuración.
+    Solo super_admin puede actualizar configuraciones de vehículos.
     
     PUT /configuracion-vehiculos/1
     Body:
@@ -191,11 +192,12 @@ def actualizar_configuracion(
 @router.delete("/{config_id}", status_code=status.HTTP_204_NO_CONTENT)
 def eliminar_configuracion(
     config_id: int,
-    current_user: Usuario = Depends(require_permission("eliminar_configuracion_vehiculo")),
+    current_user: Usuario = Depends(require_permission("super_admin")),
     db: Session = Depends(get_db)
 ):
     """
     Marca una configuración como INACTIVA (soft delete).
+    Solo super_admin puede eliminar configuraciones de vehículos.
     
     DELETE /configuracion-vehiculos/1
     

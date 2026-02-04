@@ -3,9 +3,17 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../services/api';
 import { AlertCircle, Plus, Trash2, Loader } from 'lucide-react';
 
+interface FormDataCliente {
+  nombre: string;
+  nit: string;
+  contacto: string;
+  email: string;
+  telefono: string;
+}
+
 export default function ClientesModule() {
   const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormDataCliente>({
     nombre: '',
     nit: '',
     contacto: '',
@@ -21,7 +29,7 @@ export default function ClientesModule() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => api.createCliente(data),
+    mutationFn: (data: FormDataCliente) => api.createCliente(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clientes'] });
       setFormData({ nombre: '', nit: '', contacto: '', email: '', telefono: '' });
@@ -33,7 +41,7 @@ export default function ClientesModule() {
     },
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!formData.nombre || !formData.nit) {
       setError('Nombre y NIT son requeridos');

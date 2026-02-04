@@ -1,6 +1,8 @@
-import axios, { AxiosInstance } from 'axios';
+import axios from 'axios';
+import type { AxiosInstance } from 'axios';
+import type { AuthResponse } from '../types/index';
 
-const API_URL = 'http://localhost:8000';
+const API_URL = 'http://localhost:8000/api/v1';
 
 class ApiClient {
   private client: AxiosInstance;
@@ -37,16 +39,16 @@ class ApiClient {
   }
 
   // Auth
-  async login(email: string, password: string) {
-    const response = await this.client.post('/auth/login', {
-      username: email,
+  async login(email: string, password: string): Promise<AuthResponse> {
+    const response = await this.client.post<AuthResponse>('/login', {
+      email: email,
       password,
     });
     return response.data;
   }
 
-  async register(email: string, password: string, nombre_completo: string) {
-    const response = await this.client.post('/auth/register', {
+  async register(email: string, password: string, nombre_completo: string): Promise<AuthResponse> {
+    const response = await this.client.post<AuthResponse>('/auth/register', { //ojo *** revisar porque el endpoint es post /usuarios y solo se puede usar si hay acceso (token)
       email,
       password,
       nombre_completo,

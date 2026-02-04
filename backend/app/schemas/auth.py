@@ -12,9 +12,47 @@ class LoginRequest(BaseModel):
 class TokenResponse(BaseModel):
     """Esquema para respuesta de token"""
     access_token: str
+    refresh_token: str  # Nuevo: token de renovación
     token_type: str = "bearer"
     usuario_nombre: str
     usuario_rol: str
+    empresa_nombre: str  # Agregamos nombre de empresa
+
+
+class RegistroRequest(BaseModel):
+    """Esquema para solicitud de registro público (sin autenticación)"""
+    nombre: str = Field(..., min_length=2, max_length=100, description="Nombre completo del usuario")
+    email: EmailStr = Field(..., description="Email único del usuario")
+    password: str = Field(..., min_length=6, max_length=100, description="Contraseña (mín. 6 caracteres)")
+    empresa_nit: str = Field(..., min_length=5, max_length=20, description="NIT de la empresa sin guiones (debe existir)")
+    
+    @field_validator('empresa_nit')
+    @classmethod
+    def validar_nit(cls, v: str) -> str:
+        """Valida y sanitiza el NIT (solo números)"""
+        # Eliminar guiones, espacios y otros caracteres
+        nit_limpio = ''.join(filter(str.isdigit, v))
+        
+        if not nit_limpio:
+            raise ValueError('El NIT debe contener al menos un dígito')
+        
+        if len(nit_limpio) < 5:
+            raise ValueError('El NIT debe tener al menos 5 dígitos')
+        
+        return nit_limpio
+    
+    class Config:
+        from_attributes = True
+
+
+class RegistroResponse(BaseModel):
+    """Respuesta al registrarse"""
+    mensaje: str
+    email: str
+    empresa: str
+    
+    class Config:
+        from_attributes = True
 
 
 class UsuarioResponse(BaseModel):
@@ -22,19 +60,44 @@ class UsuarioResponse(BaseModel):
     id: int
     nombre: str
     email: str
-    rol: str
+    empresa_id: Optional[int] = None  # None para super_admin
+    empresa_nombre: Optional[str] = None
+    rol: Optional[str] = None
     activo: int
+    aprobado: int
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
-    @field_validator('rol', mode='before')
+    @model_validator(mode='before')
     @classmethod
-    def extract_rol_nombre(cls, v: Any) -> str:
-        """Extrae el nombre del rol del objeto Rol"""
-        if hasattr(v, 'nombre'):
-            return v.nombre
-        return str(v)
+    def extract_relationships(cls, data: Any) -> Any:
+        """Extrae información de las relaciones empresa y rol"""
+        if isinstance(data, dict):
+            return data
+        
+        # Si es un objeto SQLAlchemy
+        result = {
+            'id': data.id,
+            'nombre': data.nombre,
+            'email': data.email,
+            'empresa_id': data.empresa_id,
+            'empresa_nombre': data.empresa.nombre if data.empresa else None,
+            'rol': data.rol.nombre if data.rol else None,
+            'activo': data.activo,
+            'aprobado': data.aprobado,
+            'created_at': data.created_at,
+            'updated_at': data.updated_at
+        }
+        return result
 
+    class Config:
+        from_attributes = True
+
+
+class AprobarUsuarioRequest(BaseModel):
+    """Esquema para aprobar un usuario pendiente"""
+    rol_nombre: str = Field(..., description="Rol a asignar (admin, supervisor, gestor_rutas, etc.)")
+    
     class Config:
         from_attributes = True
 

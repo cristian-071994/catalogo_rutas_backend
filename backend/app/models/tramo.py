@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Enum, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Enum, UniqueConstraint, ForeignKey
 from sqlalchemy.orm import relationship
 
 from app.database.base import Base
@@ -9,10 +9,13 @@ class Tramo(Base):
     __tablename__ = "tramos"
     
     __table_args__ = (
-    UniqueConstraint("origen", "destino", name="uq_tramo_origen_destino"),
+    UniqueConstraint("empresa_id", "origen", "destino", name="uq_tramo_empresa_origen_destino"),
     )
 
     id = Column(Integer, primary_key=True, index=True)
+    
+    # Multi-tenancy: Empresa a la que pertenece este tramo
+    empresa_id = Column(Integer, ForeignKey('empresas.id'), nullable=False, index=True)
 
     origen = Column(String(80), nullable=False)
     destino = Column(String(80), nullable=False)
@@ -22,6 +25,9 @@ class Tramo(Base):
         default=EstadoGeneral.activo,
         nullable=False
     )
+    
+    # Relaciones
+    empresa = relationship("Empresa", back_populates="tramos")
 
     # Relación con rutas (vía tabla puente)
     rutas = relationship(

@@ -1,9 +1,8 @@
-import { useState } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { useState } from "react";
 import ClientesModule from '../components/configuracion/ClientesModule';
 import MarcasModule from '../components/configuracion/MarcasModule';
 import ConfiguracionVehicleModule from '../components/configuracion/ConfiguracionVehicleModule';
-import VehiculosModule from '../components/configuracion/VehiculosModule';
+import VehiculosModule from '../components/configuracion/VehiculosModule'
 import RendimientoModule from '../components/configuracion/RendimientoModule';
 import RutasModule from '../components/configuracion/RutasModule';
 import TramosModule from '../components/configuracion/TramosModule';

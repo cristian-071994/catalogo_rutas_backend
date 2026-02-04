@@ -130,11 +130,12 @@ def crear_marca(
 def actualizar_marca(
     marca_id: int,
     marca_update: MarcaVehiculoUpdate,
-    current_user: Usuario = Depends(require_permission("editar_marca")),
+    current_user: Usuario = Depends(require_permission("super_admin")),
     db: Session = Depends(get_db)
 ):
     """
     Actualiza una marca.
+    Solo super_admin puede actualizar marcas.
     
     PUT /marcas-vehiculos/1
     Body:
@@ -169,11 +170,12 @@ def actualizar_marca(
 @router.delete("/{marca_id}", status_code=status.HTTP_204_NO_CONTENT)
 def eliminar_marca(
     marca_id: int,
-    current_user: Usuario = Depends(require_permission("eliminar_marca")),
+    current_user: Usuario = Depends(require_permission("super_admin")),
     db: Session = Depends(get_db)
 ):
     """
     Marca una marca como INACTIVA (soft delete).
+    Solo super_admin puede eliminar marcas.
     
     DELETE /marcas-vehiculos/1
     

@@ -34,9 +34,15 @@ def obtener_configuracion(
     Ejemplo: GET /configuracion/precio_galon
     Retorna: { "clave": "precio_galon", "valor": "9500", ... }
     """
-    config = db.query(ConfiguracionGeneral).filter(
+    query = db.query(ConfiguracionGeneral).filter(
         ConfiguracionGeneral.clave == clave
-    ).first()
+    )
+    
+    # Multi-tenancy: filtrar por empresa excepto super_admin
+    if current_user.rol and current_user.rol.nombre != "super_admin":
+        query = query.filter(ConfiguracionGeneral.empresa_id == current_user.empresa_id)
+    
+    config = query.first()
 
     if not config:
         raise HTTPException(
@@ -57,7 +63,13 @@ def listar_configuraciones(
     
     GET /configuracion/
     """
-    return db.query(ConfiguracionGeneral).all()
+    query = db.query(ConfiguracionGeneral)
+    
+    # Multi-tenancy: filtrar por empresa excepto super_admin
+    if current_user.rol and current_user.rol.nombre != "super_admin":
+        query = query.filter(ConfiguracionGeneral.empresa_id == current_user.empresa_id)
+    
+    return query.all()
 
 
 # ============================================
@@ -87,10 +99,18 @@ def crear_configuracion(
     ⚠️ La clave debe ser ÚNICA (no puedes crear dos con la misma clave)
     """
     
-    # Verificar que no exista (case-insensitive)
-    existente = db.query(ConfiguracionGeneral).filter(
+    # Verificar que no exista EN LA MISMA EMPRESA
+    query_existente = db.query(ConfiguracionGeneral).filter(
         func.lower(ConfiguracionGeneral.clave) == func.lower(config.clave)
-    ).first()
+    )
+    
+    # Multi-tenancy: solo validar duplicados en la misma empresa
+    if current_user.empresa_id is not None:
+        query_existente = query_existente.filter(
+            ConfiguracionGeneral.empresa_id == current_user.empresa_id
+        )
+    
+    existente = query_existente.first()
 
     if existente:
         raise HTTPException(
@@ -98,8 +118,11 @@ def crear_configuracion(
             detail=f"Ya existe configuración con clave '{config.clave}'"
         )
 
-    # Crear
-    nueva_config = ConfiguracionGeneral(**config.model_dump())
+    # Crear con empresa_id del usuario
+    nueva_config = ConfiguracionGeneral(
+        **config.model_dump(),
+        empresa_id=current_user.empresa_id  # Multi-tenancy
+    )
     db.add(nueva_config)
     db.commit()
     db.refresh(nueva_config)
@@ -131,9 +154,15 @@ def actualizar_configuracion(
     La clave NO cambia, es el identificador.
     """
     
-    config = db.query(ConfiguracionGeneral).filter(
+    query = db.query(ConfiguracionGeneral).filter(
         func.lower(ConfiguracionGeneral.clave) == func.lower(clave)
-    ).first()
+    )
+    
+    # Multi-tenancy: filtrar por empresa excepto super_admin
+    if current_user.rol and current_user.rol.nombre != "super_admin":
+        query = query.filter(ConfiguracionGeneral.empresa_id == current_user.empresa_id)
+    
+    config = query.first()
 
     if not config:
         raise HTTPException(
@@ -170,9 +199,15 @@ def eliminar_configuracion(
     ⚠️ Cuidado: esto puede romper el sistema si eliminas cosas importantes
     """
     
-    config = db.query(ConfiguracionGeneral).filter(
+    query = db.query(ConfiguracionGeneral).filter(
         func.lower(ConfiguracionGeneral.clave) == func.lower(clave)
-    ).first()
+    )
+    
+    # Multi-tenancy: filtrar por empresa excepto super_admin
+    if current_user.rol and current_user.rol.nombre != "super_admin":
+        query = query.filter(ConfiguracionGeneral.empresa_id == current_user.empresa_id)
+    
+    config = query.first()
 
     if not config:
         raise HTTPException(

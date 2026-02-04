@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../services/api';
-import { Cliente, Vehiculo, Ruta, ResumenRutaDetallado } from '../types';
+import type { Cliente, Vehiculo, Ruta, ResumenRutaDetallado } from '../types/index';
 import { AlertCircle, Loader } from 'lucide-react';
 
 export default function ResumenRutasPage() {
@@ -27,7 +27,6 @@ export default function ResumenRutasPage() {
     queryFn: () => api.getRutas(),
   });
 
-  const clienteSeleccionado = clientes?.find((c: Cliente) => c.id === selectedCliente);
   const rutasDelCliente = rutas?.filter((r: Ruta) => r.cliente_id === selectedCliente) || [];
 
   const handleCalcularResumen = async () => {

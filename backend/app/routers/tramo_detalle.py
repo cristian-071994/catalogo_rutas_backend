@@ -53,6 +53,14 @@ def listar_detalles_tramo(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Tramo no encontrado"
         )
+    
+    # Multi-tenancy: verificar acceso al tramo
+    if current_user.rol and current_user.rol.nombre != "super_admin":
+        if tramo.empresa_id != current_user.empresa_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes permiso para acceder a este recurso"
+            )
 
     query = db.query(TramoDetalle).filter(TramoDetalle.tramo_id == tramo_id)
     
@@ -82,6 +90,14 @@ def obtener_detalle(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Detalle de tramo no encontrado"
         )
+    
+    # Multi-tenancy: verificar acceso al tramo asociado
+    if current_user.rol and current_user.rol.nombre != "super_admin":
+        if detalle.tramo.empresa_id != current_user.empresa_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes permiso para acceder a este recurso"
+            )
 
     return detalle
 
@@ -123,6 +139,14 @@ def crear_detalle_tramo(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Tramo no encontrado"
         )
+    
+    # Multi-tenancy: verificar acceso al tramo
+    if current_user.rol and current_user.rol.nombre != "super_admin":
+        if tramo.empresa_id != current_user.empresa_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes permiso para acceder a este recurso"
+            )
 
     # Validar que no exista
     existente = db.query(TramoDetalle).filter(
@@ -180,6 +204,14 @@ def actualizar_detalle_tramo(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Detalle de tramo no encontrado"
         )
+    
+    # Multi-tenancy: verificar acceso al tramo asociado
+    if current_user.rol and current_user.rol.nombre != "super_admin":
+        if detalle.tramo.empresa_id != current_user.empresa_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes permiso para acceder a este recurso"
+            )
 
     # Actualizar campos
     detalle.kilometros = detalle_update.kilometros
@@ -218,6 +250,14 @@ def eliminar_detalle_tramo(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Detalle de tramo no encontrado"
         )
+    
+    # Multi-tenancy: verificar acceso al tramo asociado
+    if current_user.rol and current_user.rol.nombre != "super_admin":
+        if detalle.tramo.empresa_id != current_user.empresa_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes permiso para acceder a este recurso"
+            )
 
     # Soft Delete: cambiar estado a inactivo
     detalle.estado = EstadoGeneral.inactivo

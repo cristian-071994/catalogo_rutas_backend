@@ -151,8 +151,12 @@ def _create_system_roles_and_permissions():
         
         # Definir roles del sistema
         ROLES_DEL_SISTEMA = {
+            "super_admin": {
+                "descripcion": "Super Administrador del sistema (puede gestionar todas las empresas)",
+                "permisos": [perm[0] for perm in PERMISOS_DEL_SISTEMA]  # Todos los permisos
+            },
             "admin": {
-                "descripcion": "Administrador con acceso total",
+                "descripcion": "Administrador de empresa con acceso total a su empresa",
                 "permisos": [perm[0] for perm in PERMISOS_DEL_SISTEMA]  # Todos los permisos
             },
             "supervisor": {

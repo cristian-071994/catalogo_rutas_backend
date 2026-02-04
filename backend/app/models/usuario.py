@@ -12,6 +12,9 @@ class Usuario(Base):
 
     id = Column(Integer, primary_key=True, index=True)
 
+    # Multi-tenancy: Empresa a la que pertenece (NULL para super_admin)
+    empresa_id = Column(Integer, ForeignKey('empresas.id'), nullable=True, index=True)
+    
     # Datos básicos
     nombre = Column(String(100), nullable=False, index=True)
     email = Column(String(100), nullable=False, unique=True, index=True)
@@ -20,13 +23,17 @@ class Usuario(Base):
     password_hash = Column(String(255), nullable=False)
     
     # Rol del usuario (FK a tabla roles - sistema profesional)
-    rol_id = Column(Integer, ForeignKey('roles.id'), nullable=False)
+    rol_id = Column(Integer, ForeignKey('roles.id'), nullable=True)  # Nullable hasta aprobación
     
-    # Relación con Rol
+    # Relaciones
+    empresa = relationship("Empresa", back_populates="usuarios", lazy="joined")
     rol = relationship("Rol", foreign_keys=[rol_id], lazy="joined")
     
-    # Estado
-    activo = Column(Integer, default=1)  # 1 = activo, 0 = inactivo
+    # Estado y aprobación
+    activo = Column(Integer, default=0)  # 0 = pendiente aprobación, 1 = activo
+    aprobado = Column(Integer, default=0)  # 0 = pendiente, 1 = aprobado
+    aprobado_por = Column(Integer, ForeignKey('usuarios.id'), nullable=True)  # Admin que aprobó
+    aprobado_en = Column(DateTime, nullable=True)
     
     # Auditoría
     created_at = Column(DateTime, server_default=func.now())

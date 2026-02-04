@@ -13,6 +13,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
+from sqlalchemy.orm import joinedload
 
 from app.database.session import get_db
 from app.models.usuario import Usuario
@@ -27,7 +28,10 @@ load_dotenv()
 # Configuración desde variables de entorno
 SECRET_KEY = os.getenv("SECRET_KEY", "clave-por-defecto-solo-desarrollo")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
+# Access token corto (30 minutos) - para operaciones
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+# Refresh token (1 día) - para renovar automáticamente
+REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "1"))
 
 # Contexto de hashing para contraseñas
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -79,7 +83,36 @@ def create_access_token(
             minutes=ACCESS_TOKEN_EXPIRE_MINUTES
         )
     
-    to_encode.update({"exp": expire})
+    to_encode.update({"exp": expire, "type": "access"})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    
+    return encoded_jwt
+
+
+def create_refresh_token(
+    data: dict,
+    expires_delta: Optional[timedelta] = None
+) -> str:
+    """
+    Crea un refresh token JWT con expiración larga.
+    
+    Args:
+        data: Datos a incluir en el token (ej: {"sub": email})
+        expires_delta: Tiempo de expiración (default: 1 día)
+    
+    Returns:
+        Refresh token JWT firmado
+    """
+    to_encode = data.copy()
+    
+    if expires_delta:
+        expire = datetime.now(timezone.utc) + expires_delta
+    else:
+        expire = datetime.now(timezone.utc) + timedelta(
+            days=REFRESH_TOKEN_EXPIRE_DAYS
+        )
+    
+    to_encode.update({"exp": expire, "type": "refresh"})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     
     return encoded_jwt
@@ -137,7 +170,11 @@ async def get_current_user(
             detail="Token inválido",
         )
     
-    usuario = db.query(Usuario).filter(Usuario.email == email).first()
+    # Cargar usuario con sus relaciones (rol y empresa)
+    usuario = db.query(Usuario).options(
+        joinedload(Usuario.rol),
+        joinedload(Usuario.empresa)
+    ).filter(Usuario.email == email).first()
     
     if usuario is None:
         raise HTTPException(
@@ -178,6 +215,10 @@ def require_role(*roles: str):
                 detail="Usuario sin rol asignado"
             )
         
+        # Super admin tiene acceso a todo
+        if current_user.rol.nombre == "super_admin":
+            return current_user
+        
         if current_user.rol.nombre not in roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -217,6 +258,10 @@ def require_permission(permission: str):
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Usuario sin rol asignado"
             )
+        
+        # Super admin tiene todos los permisos
+        if current_user.rol.nombre == "super_admin":
+            return current_user
         
         # Buscar si el rol tiene el permiso
         tiene_permiso = False
@@ -312,57 +357,96 @@ def authenticate_user(
 
 def create_test_users(db: Session):
     """
-    Crea usuarios de prueba en la base de datos.
+    Crea empresas y usuarios de prueba en la base de datos.
     
     Solo crea si no existen.
     
+    Empresas creadas:
+    - Cointra (NIT: 900123456-7)
+    - Geotab (NIT: 900234567-8)
+    - Satena (NIT: 900345678-9)
+    
     Usuarios creados:
-    - admin@test.com / admin123 (Rol: admin)
-    - supervisor@test.com / supervisor123 (Rol: supervisor)
-    - gestor_rutas@test.com / gestor123 (Rol: gestor_rutas)
-    - gestor_peajes@test.com / gestor123 (Rol: gestor_peajes)
-    - gestor_clientes@test.com / gestor123 (Rol: gestor_clientes)
-    - consultor@test.com / consultor123 (Rol: consultor)
+    - admin@cointra.com / admin123 (Admin Cointra)
+    - admin@geotab.com / admin123 (Admin Geotab)
+    - admin@satena.com / admin123 (Admin Satena)
+    - consultor@cointra.com / consultor123 (Consultor Cointra)
     """
     from app.models.rol_permiso import Rol
+    from app.models.empresa import Empresa
     from sqlalchemy import func
     
+    # 1. Crear empresas de prueba
+    empresas_predefinidas = [
+        {
+            "nombre": "Cointra",
+            "nit": "9001234567",  # Sin guiones
+            "contacto": "Gerente General",
+            "email": "contacto@cointra.com",
+            "telefono": "3001234567",
+        },
+        {
+            "nombre": "Geotab Colombia",
+            "nit": "9002345678",  # Sin guiones
+            "contacto": "Director Operaciones",
+            "email": "contacto@geotab.com",
+            "telefono": "3002345678",
+        },
+        {
+            "nombre": "Satena",
+            "nit": "9003456789",  # Sin guiones
+            "contacto": "Jefe Logística",
+            "email": "contacto@satena.com",
+            "telefono": "3003456789",
+        },
+    ]
+    
+    empresas_creadas = {}
+    
+    for datos in empresas_predefinidas:
+        existente = db.query(Empresa).filter(Empresa.nit == datos["nit"]).first()
+        
+        if not existente:
+            empresa = Empresa(**datos)
+            db.add(empresa)
+            db.flush()  # Para obtener el ID
+            empresas_creadas[datos["nombre"]] = empresa
+            print(f"✅ Empresa '{datos['nombre']}' creada")
+        else:
+            empresas_creadas[datos["nombre"]] = existente
+            print(f"ℹ️ Empresa '{datos['nombre']}' ya existe")
+    
+    db.commit()
+    
+    # 2. Crear usuarios de prueba
     usuarios_predefinidos = [
         {
-            "nombre": "Administrador",
-            "email": "admin@test.com",
+            "nombre": "Admin Cointra",
+            "email": "admin@cointra.com",
             "password": "admin123",
             "rol_nombre": "admin",
+            "empresa_nombre": "Cointra",
         },
         {
-            "nombre": "Supervisor General",
-            "email": "supervisor@test.com",
-            "password": "supervisor123",
-            "rol_nombre": "supervisor",
+            "nombre": "Admin Geotab",
+            "email": "admin@geotab.com",
+            "password": "admin123",
+            "rol_nombre": "admin",
+            "empresa_nombre": "Geotab Colombia",
         },
         {
-            "nombre": "Gestor de Rutas",
-            "email": "gestor_rutas@test.com",
-            "password": "gestor123",
-            "rol_nombre": "gestor_rutas",
+            "nombre": "Admin Satena",
+            "email": "admin@satena.com",
+            "password": "admin123",
+            "rol_nombre": "admin",
+            "empresa_nombre": "Satena",
         },
         {
-            "nombre": "Gestor de Peajes",
-            "email": "gestor_peajes@test.com",
-            "password": "gestor123",
-            "rol_nombre": "gestor_peajes",
-        },
-        {
-            "nombre": "Gestor de Clientes",
-            "email": "gestor_clientes@test.com",
-            "password": "gestor123",
-            "rol_nombre": "gestor_clientes",
-        },
-        {
-            "nombre": "Consultor (Lectura)",
-            "email": "consultor@test.com",
+            "nombre": "Consultor Cointra",
+            "email": "consultor@cointra.com",
             "password": "consultor123",
             "rol_nombre": "consultor",
+            "empresa_nombre": "Cointra",
         },
     ]
     
@@ -382,14 +466,25 @@ def create_test_users(db: Session):
                 print(f"⚠️ Rol '{datos['rol_nombre']}' no encontrado. Saltando usuario {datos['email']}")
                 continue
             
+            # Obtener la empresa
+            empresa = empresas_creadas.get(datos["empresa_nombre"])
+            if not empresa:
+                print(f"⚠️ Empresa '{datos['empresa_nombre']}' no encontrada. Saltando usuario {datos['email']}")
+                continue
+            
             usuario = Usuario(
                 nombre=datos["nombre"],
                 email=datos["email"],
                 password_hash=hash_password(datos["password"]),
                 rol_id=rol.id,
+                empresa_id=empresa.id,
                 activo=1,
+                aprobado=1,  # Usuarios de prueba pre-aprobados
             )
             db.add(usuario)
+            print(f"✅ Usuario '{datos['email']}' creado")
+        else:
+            print(f"ℹ️ Usuario '{datos['email']}' ya existe")
     
     db.commit()
-    print("✅ Usuarios de prueba inicializados correctamente")
+    print("✅ Empresas y usuarios de prueba inicializados correctamente")

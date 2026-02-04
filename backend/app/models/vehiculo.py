@@ -9,11 +9,13 @@ class Vehiculo(Base):
     __tablename__ = "vehiculos"
 
     id = Column(Integer, primary_key=True, index=True)
+    
+    # Multi-tenancy: Empresa a la que pertenece este vehículo
+    empresa_id = Column(Integer, ForeignKey('empresas.id'), nullable=False, index=True)
 
     placa = Column(
         String(6),
         nullable=False,
-        unique=True,
         index=True
     )
 
@@ -30,6 +32,7 @@ class Vehiculo(Base):
     )
 
     # Relaciones
+    empresa = relationship("Empresa", back_populates="vehiculos")
     configuracion = relationship(
         "ConfiguracionVehiculo",
         back_populates="vehiculos"

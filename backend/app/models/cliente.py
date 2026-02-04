@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Enum
+from sqlalchemy import Column, Integer, String, DateTime, Enum, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -10,11 +10,13 @@ class Cliente(Base):
     __tablename__ = "clientes"
 
     id = Column(Integer, primary_key=True, index=True)
+    
+    # Multi-tenancy: Empresa a la que pertenece este cliente
+    empresa_id = Column(Integer, ForeignKey('empresas.id'), nullable=False, index=True)
 
     nombre = Column(
         String(100),
         nullable=False,
-        unique=True,
         index=True
     )
 
@@ -30,6 +32,7 @@ class Cliente(Base):
     )
 
     # Relaciones
+    empresa = relationship("Empresa", back_populates="clientes")
     rutas = relationship(
         "Ruta",
         back_populates="cliente",

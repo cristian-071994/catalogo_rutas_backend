@@ -36,13 +36,13 @@ router = APIRouter(
     summary="Listar Roles"
 )
 def listar_roles(
-    current_user: Usuario = Depends(require_role("admin")),
+    current_user: Usuario = Depends(require_role("super_admin")),
     db: Session = Depends(get_db)
 ):
     """
     Lista todos los roles del sistema.
     
-    ⚠️ Solo administradores
+    ⚠️ Solo super administrador
     """
     roles = db.query(Rol).all()
     return roles
@@ -59,13 +59,13 @@ def listar_roles(
 )
 def obtener_rol(
     rol_id: int,
-    current_user: Usuario = Depends(require_role("admin")),
+    current_user: Usuario = Depends(require_role("super_admin")),
     db: Session = Depends(get_db)
 ):
     """
     Obtiene un rol con todos sus permisos asignados.
     
-    ⚠️ Solo administradores
+    ⚠️ Solo super administrador
     """
     rol = db.query(Rol).filter(Rol.id == rol_id).first()
     
@@ -90,13 +90,13 @@ def obtener_rol(
 )
 def crear_rol(
     rol_data: RolCreate,
-    current_user: Usuario = Depends(require_role("admin")),
+    current_user: Usuario = Depends(require_role("super_admin")),
     db: Session = Depends(get_db)
 ):
     """
     Crea un nuevo rol en el sistema.
     
-    ⚠️ Solo administradores
+    ⚠️ Solo super administrador
     
     **Validaciones:**
     - Nombre debe ser único
@@ -152,7 +152,7 @@ def crear_rol(
 def actualizar_rol(
     rol_id: int,
     rol_update: RolUpdate,
-    current_user: Usuario = Depends(require_role("admin")),
+    current_user: Usuario = Depends(require_role("super_admin")),
     db: Session = Depends(get_db)
 ):
     """
@@ -231,7 +231,7 @@ def actualizar_rol(
 def asignar_permisos(
     rol_id: int,
     request: AsignarPermisosRequest,
-    current_user: Usuario = Depends(require_role("admin")),
+    current_user: Usuario = Depends(require_role("super_admin")),
     db: Session = Depends(get_db)
 ):
     """
@@ -284,7 +284,7 @@ def asignar_permisos(
 )
 def eliminar_rol(
     rol_id: int,
-    current_user: Usuario = Depends(require_role("admin")),
+    current_user: Usuario = Depends(require_role("super_admin")),
     db: Session = Depends(get_db)
 ):
     """
