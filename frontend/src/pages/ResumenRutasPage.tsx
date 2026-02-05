@@ -49,7 +49,7 @@ export default function ResumenRutasPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="w-full min-w-0 space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-neutral-900">📊 Resumen de Rutas</h1>
         <p className="text-neutral-600 mt-1">Selecciona un cliente, vehículo y ruta para ver el desglose de costos</p>

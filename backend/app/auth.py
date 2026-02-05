@@ -404,12 +404,14 @@ def create_test_users(db: Session):
     empresas_creadas = {}
     
     for datos in empresas_predefinidas:
-        existente = db.query(Empresa).filter(Empresa.nit == datos["nit"]).first()
+        # Verificar por NIT o nombre para evitar duplicados
+        existente = db.query(Empresa).filter(
+            (Empresa.nit == datos["nit"]) | (Empresa.nombre == datos["nombre"])
+        ).first()
         
         if not existente:
             empresa = Empresa(**datos)
             db.add(empresa)
-            db.flush()  # Para obtener el ID
             empresas_creadas[datos["nombre"]] = empresa
             print(f"✅ Empresa '{datos['nombre']}' creada")
         else:

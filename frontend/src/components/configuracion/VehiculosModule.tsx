@@ -5,7 +5,6 @@ import { AlertCircle, Plus, Trash2, Loader } from 'lucide-react';
 
 interface FormDataVehiculo {
   placa: string;
-  marca_id: number;
   configuracion_id: number;
 }
 
@@ -13,7 +12,6 @@ export default function VehiculosModule() {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState<FormDataVehiculo>({
     placa: '',
-    marca_id: 0,
     configuracion_id: 0,
   });
   const [error, setError] = useState('');
@@ -21,35 +19,45 @@ export default function VehiculosModule() {
 
   const { data: vehiculos = [], isLoading } = useQuery({
     queryKey: ['vehiculos'],
-    queryFn: () => api.getVehiculos(),
-  });
-
-  const { data: marcas = [] } = useQuery({
-    queryKey: ['marcas'],
-    queryFn: () => api.getMarcas(),
+    queryFn: async () => {
+      const response = await api.getVehiculos();
+      return response.data?.items || response.data || [];
+    },
   });
 
   const { data: configs = [] } = useQuery({
     queryKey: ['configuracion-vehiculos'],
-    queryFn: () => api.getConfiguracionVehiculos(),
+    queryFn: async () => {
+      const response = await api.getConfiguracionVehiculos();
+      return response.data?.items || response.data || [];
+    },
+  });
+
+  const { data: marcas = [] } = useQuery({
+    queryKey: ['marcas'],
+    queryFn: async () => {
+      const response = await api.getMarcas();
+      return response.data?.items || response.data || [];
+    },
   });
 
   const createMutation = useMutation({
     mutationFn: (data: FormDataVehiculo) => api.createVehiculo(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vehiculos'] });
-      setFormData({ placa: '', marca_id: 0, configuracion_id: 0 });
+      setFormData({ placa: '', configuracion_id: 0 });
       setShowForm(false);
       setError('');
     },
     onError: (err: any) => {
       setError(err.response?.data?.detail || 'Error al crear vehículo');
+      setTimeout(() => setError(''), 10000);
     },
   });
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!formData.placa || !formData.marca_id || !formData.configuracion_id) {
+    if (!formData.placa || !formData.configuracion_id) {
       setError('Todos los campos son requeridos');
       return;
     }
@@ -83,7 +91,7 @@ export default function VehiculosModule() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <input
               type="text"
-              placeholder="Placa (ej: ABC-123)"
+              placeholder="Placa (ej: ABC123)"
               className="input-base"
               value={formData.placa}
               onChange={(e) => setFormData({ ...formData, placa: e.target.value.toUpperCase() })}
@@ -91,29 +99,19 @@ export default function VehiculosModule() {
             />
             <select
               className="input-base"
-              value={formData.marca_id || ''}
-              onChange={(e) => setFormData({ ...formData, marca_id: Number(e.target.value) })}
-              required
-            >
-              <option value="">-- Selecciona una marca --</option>
-              {marcas.map((marca: any) => (
-                <option key={marca.id} value={marca.id}>
-                  {marca.nombre}
-                </option>
-              ))}
-            </select>
-            <select
-              className="input-base"
               value={formData.configuracion_id || ''}
               onChange={(e) => setFormData({ ...formData, configuracion_id: Number(e.target.value) })}
               required
             >
               <option value="">-- Selecciona una configuración --</option>
-              {configs.map((config: any) => (
-                <option key={config.id} value={config.id}>
-                  {config.nombre}
-                </option>
-              ))}
+              {configs.map((config: any) => {
+                const marca = marcas.find((m: any) => m.id === config.marca_id);
+                return (
+                  <option key={config.id} value={config.id}>
+                    {marca?.nombre || 'Desconocido'} - {config.modelo}
+                  </option>
+                );
+              })}
             </select>
             <div className="flex gap-2">
               <button type="submit" className="btn-primary" disabled={createMutation.isPending}>
@@ -121,7 +119,7 @@ export default function VehiculosModule() {
               </button>
               <button
                 type="button"
-                className="btn-secondary"
+                className="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50"
                 onClick={() => setShowForm(false)}
               >
                 Cancelar
@@ -131,36 +129,47 @@ export default function VehiculosModule() {
         </div>
       )}
 
-      <div className="overflow-x-auto">
+      <div className="max-h-[400px] overflow-y-auto border border-neutral-200 rounded-lg">
         <table className="w-full">
-          <thead>
+          <thead className="sticky top-0 bg-white">
             <tr className="border-b border-neutral-200">
               <th className="px-4 py-3 text-left text-sm font-semibold text-neutral-700">Placa</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-neutral-700">Marca</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-neutral-700">Configuración</th>
-              <th className="px-4 py-3 text-right text-sm font-semibold text-neutral-700">Acciones</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-neutral-700">Estado</th>
             </tr>
           </thead>
           <tbody>
-            {vehiculos.map((vehiculo: any) => (
-              <tr key={vehiculo.id} className="border-b border-neutral-100 hover:bg-neutral-50">
-                <td className="px-4 py-3 text-sm font-medium text-neutral-900">{vehiculo.placa}</td>
-                <td className="px-4 py-3 text-sm text-neutral-600">{vehiculo.marca?.nombre}</td>
-                <td className="px-4 py-3 text-sm text-neutral-600">{vehiculo.configuracion?.nombre}</td>
-                <td className="px-4 py-3 text-right">
-                  <button className="p-1 text-red-600 hover:bg-red-50 rounded">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {vehiculos.map((vehiculo: any) => {
+              const config = configs.find((c: any) => c.id === vehiculo.configuracion_id);
+              const marca = marcas.find((m: any) => m.id === config?.marca_id);
+              
+              return (
+                <tr key={vehiculo.id} className="border-b border-neutral-100 hover:bg-neutral-50">
+                  <td className="px-4 py-3 text-sm font-medium text-neutral-900">{vehiculo.placa}</td>
+                  <td className="px-4 py-3 text-sm text-neutral-600">
+                    {marca?.nombre || 'N/A'} - {config?.modelo || 'N/A'}
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    {vehiculo.estado === 1 ? (
+                      <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                        Activo
+                      </span>
+                    ) : (
+                      <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">
+                        Inactivo
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
 
-      {vehiculos.length === 0 && (
+      {!isLoading && vehiculos.length === 0 && (
         <div className="text-center py-8 text-neutral-600">
-          <p>No hay vehículos registrados. Crea uno nuevo para comenzar.</p>
+          No hay vehículos registrados
         </div>
       )}
     </div>

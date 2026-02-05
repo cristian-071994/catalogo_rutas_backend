@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Mail, Lock, User, AlertCircle, Building2, CheckCircle } from 'lucide-react';
+import { Mail, User, AlertCircle, Building2, CheckCircle } from 'lucide-react';
+import PasswordInput from '../components/PasswordInput';
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
@@ -24,10 +25,10 @@ export default function RegisterPage() {
       const result = await register(email, password, nombreCompleto, empresaNit);
       setSuccess(result.mensaje);
       
-      // Redirigir al login después de 3 segundos
+      // Redirigir al login después de 10 segundos
       setTimeout(() => {
         navigate('/login');
-      }, 3000);
+      }, 10000);
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Error al registrarse');
     } finally {
@@ -37,7 +38,7 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 flex items-center justify-center px-4 py-8">
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-md mx-auto">
         <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8">
           <div className="flex items-center gap-3 mb-6">
             <div className="bg-blue-600 p-2 rounded-lg">
@@ -122,22 +123,15 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Contraseña
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
-                <input
-                  type="password"
-                  className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={6}
-                  disabled={isLoading || !!success}
-                />
-              </div>
+              <PasswordInput
+                label="Contraseña"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+                minLength={6}
+                className={isLoading || !!success ? 'opacity-50 cursor-not-allowed' : ''}
+              />
               <p className="text-xs text-gray-500 mt-1">Mínimo 6 caracteres</p>
             </div>
 

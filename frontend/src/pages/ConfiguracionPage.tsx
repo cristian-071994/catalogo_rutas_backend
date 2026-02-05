@@ -25,15 +25,15 @@ export default function ConfiguracionPage() {
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="px-4 sm:px-6 lg:px-8">
+    <div className="w-full min-w-0 space-y-6 overflow-x-hidden">
+      <div>
         <h1 className="text-3xl font-bold text-neutral-900">⚙️ Configuración del Sistema</h1>
         <p className="text-neutral-600 mt-1">Gestiona todos los módulos necesarios para el cálculo de rutas</p>
       </div>
 
       {/* Tabs */}
-      <div className="px-4 sm:px-6 lg:px-8">
-        <div className="bg-white border border-neutral-200 rounded-t-lg overflow-hidden">
+      <div className="w-full min-w-0 overflow-hidden">
+        <div className="bg-white border border-neutral-200 rounded-t-lg">
           <div className="tabs-container flex gap-2 sm:gap-3 overflow-x-auto">
             {tabs.map((tab) => (
               <button
@@ -53,7 +53,7 @@ export default function ConfiguracionPage() {
       </div>
 
       {/* Content */}
-      <div className="px-4 sm:px-6 lg:px-8">
+      <div className="w-full min-w-0">
         <div className="bg-white border border-neutral-200 rounded-b-lg p-4 sm:p-6 lg:p-8">
           {activeTab === 'precio-combustible' && <PrecioCombustibleModule />}
           {activeTab === 'clientes' && <ClientesModule />}
@@ -68,7 +68,7 @@ export default function ConfiguracionPage() {
       </div>
 
       {/* Nota sobre orden de creación */}
-      <div className="px-4 sm:px-6 lg:px-8">
+      <div>
         <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <p className="text-sm text-blue-900 font-medium mb-2">💡 Recomendación de orden:</p>
           <p className="text-sm text-blue-800">

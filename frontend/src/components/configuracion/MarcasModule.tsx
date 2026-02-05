@@ -81,7 +81,7 @@ export default function MarcasModule() {
               </button>
               <button
                 type="button"
-                className="btn-secondary"
+                className="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
                 onClick={() => setShowForm(false)}
               >
                 Cancelar
@@ -91,9 +91,9 @@ export default function MarcasModule() {
         </div>
       )}
 
-      <div className="overflow-x-auto">
+      <div className="max-h-[400px] overflow-y-auto border border-neutral-200 rounded-lg">
         <table className="w-full">
-          <thead>
+          <thead className="sticky top-0 bg-white">
             <tr className="border-b border-neutral-200">
               <th className="px-4 py-3 text-left text-sm font-semibold text-neutral-700">Nombre</th>
               <th className="px-4 py-3 text-right text-sm font-semibold text-neutral-700">Acciones</th>

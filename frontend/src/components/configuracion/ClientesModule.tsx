@@ -5,20 +5,12 @@ import { AlertCircle, Plus, Trash2, Loader } from 'lucide-react';
 
 interface FormDataCliente {
   nombre: string;
-  nit: string;
-  contacto: string;
-  email: string;
-  telefono: string;
 }
 
 export default function ClientesModule() {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState<FormDataCliente>({
     nombre: '',
-    nit: '',
-    contacto: '',
-    email: '',
-    telefono: '',
   });
   const [error, setError] = useState('');
   const queryClient = useQueryClient();
@@ -32,7 +24,7 @@ export default function ClientesModule() {
     mutationFn: (data: FormDataCliente) => api.createCliente(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clientes'] });
-      setFormData({ nombre: '', nit: '', contacto: '', email: '', telefono: '' });
+      setFormData({ nombre: '' });
       setShowForm(false);
       setError('');
     },
@@ -43,8 +35,8 @@ export default function ClientesModule() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!formData.nombre || !formData.nit) {
-      setError('Nombre y NIT son requeridos');
+    if (!formData.nombre) {
+      setError('Nombre es requerido');
       return;
     }
     createMutation.mutate(formData);
@@ -83,42 +75,13 @@ export default function ClientesModule() {
               onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
               required
             />
-            <input
-              type="text"
-              placeholder="NIT"
-              className="input-base"
-              value={formData.nit}
-              onChange={(e) => setFormData({ ...formData, nit: e.target.value })}
-              required
-            />
-            <input
-              type="text"
-              placeholder="Contacto"
-              className="input-base"
-              value={formData.contacto}
-              onChange={(e) => setFormData({ ...formData, contacto: e.target.value })}
-            />
-            <input
-              type="email"
-              placeholder="Email"
-              className="input-base"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            />
-            <input
-              type="tel"
-              placeholder="Teléfono"
-              className="input-base"
-              value={formData.telefono}
-              onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
-            />
             <div className="flex gap-2">
               <button type="submit" className="btn-primary" disabled={createMutation.isPending}>
                 {createMutation.isPending ? 'Guardando...' : 'Guardar'}
               </button>
               <button
                 type="button"
-                className="btn-secondary"
+                className="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
                 onClick={() => setShowForm(false)}
               >
                 Cancelar
@@ -128,14 +91,11 @@ export default function ClientesModule() {
         </div>
       )}
 
-      <div className="overflow-x-auto">
+      <div className="max-h-[400px] overflow-y-auto border border-neutral-200 rounded-lg">
         <table className="w-full">
-          <thead>
+          <thead className="sticky top-0 bg-white">
             <tr className="border-b border-neutral-200">
               <th className="px-4 py-3 text-left text-sm font-semibold text-neutral-700">Nombre</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-neutral-700">NIT</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-neutral-700">Email</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-neutral-700">Teléfono</th>
               <th className="px-4 py-3 text-right text-sm font-semibold text-neutral-700">Acciones</th>
             </tr>
           </thead>
@@ -143,9 +103,6 @@ export default function ClientesModule() {
             {clientes.map((cliente: any) => (
               <tr key={cliente.id} className="border-b border-neutral-100 hover:bg-neutral-50">
                 <td className="px-4 py-3 text-sm text-neutral-900">{cliente.nombre}</td>
-                <td className="px-4 py-3 text-sm text-neutral-600">{cliente.nit}</td>
-                <td className="px-4 py-3 text-sm text-neutral-600">{cliente.email}</td>
-                <td className="px-4 py-3 text-sm text-neutral-600">{cliente.telefono}</td>
                 <td className="px-4 py-3 text-right">
                   <button className="p-1 text-red-600 hover:bg-red-50 rounded">
                     <Trash2 className="w-4 h-4" />

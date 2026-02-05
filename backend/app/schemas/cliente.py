@@ -17,6 +17,7 @@ class ClienteResponse(BaseModel):
     id: int
     nombre: str
     estado: EstadoGeneral
+    empresa_id: int
 
     rutas: List[RutaResponse] = []
 

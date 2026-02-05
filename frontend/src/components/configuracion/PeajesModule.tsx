@@ -1,49 +1,37 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../services/api';
-import { AlertCircle, Plus, Trash2, Loader } from 'lucide-react';
-
-interface FormDataPeaje {
-  nombre: string;
-  sector: string;
-  valor: number;
-}
+import { AlertCircle, RefreshCw, Loader } from 'lucide-react';
 
 export default function PeajesModule() {
-  const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState<FormDataPeaje>({
-    nombre: '',
-    sector: '',
-    valor: 0,
-  });
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const queryClient = useQueryClient();
 
   const { data: peajes = [], isLoading } = useQuery({
     queryKey: ['peajes'],
-    queryFn: () => api.getPeajes(),
+    queryFn: async () => {
+      const response = await api.getPeajes();
+      return response.data?.items || response.data || [];
+    },
   });
 
-  const createMutation = useMutation({
-    mutationFn: (data: FormDataPeaje) => api.createPeaje(data),
+  const sincronizarMutation = useMutation({
+    mutationFn: () => api.sincronizarPeajes(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['peajes'] });
-      setFormData({ nombre: '', sector: '', valor: 0 });
-      setShowForm(false);
+      setSuccessMessage('Sincronización completada exitosamente');
       setError('');
+      setTimeout(() => setSuccessMessage(''), 5000);
     },
     onError: (err: any) => {
-      setError(err.response?.data?.detail || 'Error al crear peaje');
+      setError(err.response?.data?.detail || 'Error al sincronizar con la ANI');
+      setTimeout(() => setError(''), 10000);
     },
   });
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!formData.nombre || !formData.sector || formData.valor <= 0) {
-      setError('Todos los campos son requeridos');
-      return;
-    }
-    createMutation.mutate(formData);
+  const handleSincronizar = () => {
+    sincronizarMutation.mutate();
   };
 
   return (
@@ -51,11 +39,12 @@ export default function PeajesModule() {
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold text-neutral-900">Peajes</h3>
         <button
-          onClick={() => setShowForm(!showForm)}
+          onClick={handleSincronizar}
           className="btn-primary flex items-center gap-2"
+          disabled={sincronizarMutation.isPending}
         >
-          <Plus className="w-5 h-5" />
-          Nuevo Peaje
+          <RefreshCw className={`w-5 h-5 ${sincronizarMutation.isPending ? 'animate-spin' : ''}`} />
+          {sincronizarMutation.isPending ? 'Sincronizando...' : 'Consultar ANI'}
         </button>
       </div>
 
@@ -66,78 +55,49 @@ export default function PeajesModule() {
         </div>
       )}
 
-      {showForm && (
-        <div className="border border-neutral-200 rounded-lg p-6 bg-neutral-50">
-          <h3 className="font-semibold text-neutral-900 mb-4">Crear Nuevo Peaje</h3>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <input
-              type="text"
-              placeholder="Nombre del peaje"
-              className="input-base"
-              value={formData.nombre}
-              onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-              required
-            />
-            <input
-              type="text"
-              placeholder="Sector o ruta donde aplica"
-              className="input-base"
-              value={formData.sector}
-              onChange={(e) => setFormData({ ...formData, sector: e.target.value })}
-              required
-            />
-            <input
-              type="number"
-              placeholder="Valor del peaje (COP)"
-              className="input-base"
-              value={formData.valor || ''}
-              onChange={(e) => setFormData({ ...formData, valor: parseFloat(e.target.value) })}
-              step="0.01"
-              required
-            />
-            <div className="flex gap-2">
-              <button type="submit" className="btn-primary" disabled={createMutation.isPending}>
-                {createMutation.isPending ? 'Guardando...' : 'Guardar'}
-              </button>
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => setShowForm(false)}
-              >
-                Cancelar
-              </button>
-            </div>
-          </form>
+      {successMessage && (
+        <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
+          <AlertCircle className="w-5 h-5 text-green-600" />
+          <p className="text-sm text-green-600">{successMessage}</p>
         </div>
       )}
 
       {isLoading && (
-        <div className="flex items-center justify-center py-8"><Loader className="animate-spin" /></div>
+        <div className="flex items-center justify-center py-8">
+          <Loader className="animate-spin" />
+        </div>
       )}
 
       {!isLoading && (
-        <div className="overflow-x-auto">
+        <div className="max-h-[400px] overflow-y-auto border border-neutral-200 rounded-lg">
           <table className="w-full">
-            <thead>
+            <thead className="sticky top-0 bg-white">
               <tr className="border-b border-neutral-200">
-                <th className="px-4 py-3 text-left text-sm font-semibold text-neutral-700">Nombre</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-neutral-700">Sector</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-neutral-700">Valor</th>
-                <th className="px-4 py-3 text-right text-sm font-semibold text-neutral-700">Acciones</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-neutral-700">Nombre Peaje</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-neutral-700">Categoría Tarifa</th>
+                <th className="px-4 py-3 text-right text-sm font-semibold text-neutral-700">Costo</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-neutral-700">Última Actualización</th>
               </tr>
             </thead>
             <tbody>
               {peajes.map((peaje: any) => (
                 <tr key={peaje.id} className="border-b border-neutral-100 hover:bg-neutral-50">
-                  <td className="px-4 py-3 text-sm font-medium text-neutral-900">{peaje.nombre}</td>
-                  <td className="px-4 py-3 text-sm text-neutral-600">{peaje.sector}</td>
-                  <td className="px-4 py-3 text-sm font-medium text-neutral-900">
-                    ${peaje.valor.toLocaleString('es-CO', { minimumFractionDigits: 2 })}
+                  <td className="px-4 py-3 text-sm font-medium text-neutral-900">{peaje.nombre_peaje || 'N/A'}</td>
+                  <td className="px-4 py-3 text-sm text-neutral-600">{peaje.categoria_tarifa || 'N/A'}</td>
+                  <td className="px-4 py-3 text-right text-sm font-medium text-neutral-900">
+                    ${(peaje.costo || 0).toLocaleString('es-CO', { minimumFractionDigits: 0 })}
                   </td>
-                  <td className="px-4 py-3 text-right">
-                    <button className="p-1 text-red-600 hover:bg-red-50 rounded">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                  <td className="px-4 py-3 text-sm text-neutral-600">
+                    {peaje.ultima_actualizacion 
+                      ? new Date(peaje.ultima_actualizacion).toLocaleString('es-CO', {
+                          timeZone: 'America/Bogota',
+                          year: 'numeric',
+                          month: '2-digit',
+                          day: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })
+                      : 'N/A'}
                   </td>
                 </tr>
               ))}
@@ -148,7 +108,7 @@ export default function PeajesModule() {
 
       {!isLoading && peajes.length === 0 && (
         <div className="text-center py-8 text-neutral-600">
-          <p>No hay peajes registrados. Crea uno nuevo para comenzar.</p>
+          No hay peajes registrados. Haz clic en "Consultar ANI" para sincronizar.
         </div>
       )}
     </div>

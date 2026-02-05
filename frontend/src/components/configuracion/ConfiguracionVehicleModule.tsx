@@ -4,15 +4,15 @@ import api from '../../services/api';
 import { AlertCircle, Plus, Trash2, Loader } from 'lucide-react';
 
 interface FormDataConfigVehiculo {
-  nombre: string;
-  capacidad_tanque: number;
+  marca_id: number | '';
+  modelo: number | '';
 }
 
 export default function ConfiguracionVehicleModule() {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState<FormDataConfigVehiculo>({
-    nombre: '',
-    capacidad_tanque: 0,
+    marca_id: '',
+    modelo: '',
   });
   const [error, setError] = useState('');
   const queryClient = useQueryClient();
@@ -22,11 +22,16 @@ export default function ConfiguracionVehicleModule() {
     queryFn: () => api.getConfiguracionVehiculos(),
   });
 
+  const { data: marcas = [] } = useQuery({
+    queryKey: ['marcas'],
+    queryFn: () => api.getMarcas(),
+  });
+
   const createMutation = useMutation({
     mutationFn: (data: FormDataConfigVehiculo) => api.createConfiguracionVehiculo(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['configuracion-vehiculos'] });
-      setFormData({ nombre: '', capacidad_tanque: 0 });
+      setFormData({ marca_id: '', modelo: '' });
       setShowForm(false);
       setError('');
     },
@@ -37,11 +42,14 @@ export default function ConfiguracionVehicleModule() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!formData.nombre || formData.capacidad_tanque <= 0) {
+    if (!formData.marca_id || !formData.modelo) {
       setError('Todos los campos son requeridos');
       return;
     }
-    createMutation.mutate(formData);
+    createMutation.mutate({
+      marca_id: Number(formData.marca_id),
+      modelo: Number(formData.modelo)
+    });
   };
 
   if (isLoading) {
@@ -69,30 +77,42 @@ export default function ConfiguracionVehicleModule() {
         <div className="border border-neutral-200 rounded-lg p-6 bg-neutral-50">
           <h3 className="font-semibold text-neutral-900 mb-4">Crear Nueva Configuración</h3>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <input
-              type="text"
-              placeholder="Nombre (ej: Camión tipo C)"
-              className="input-base"
-              value={formData.nombre}
-              onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-              required
-            />
-            <input
-              type="number"
-              placeholder="Capacidad del tanque (galones)"
-              className="input-base"
-              value={formData.capacidad_tanque || ''}
-              onChange={(e) => setFormData({ ...formData, capacidad_tanque: parseFloat(e.target.value) })}
-              step="0.1"
-              required
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Marca *</label>
+              <select
+                className="input-base"
+                value={formData.marca_id}
+                onChange={(e) => setFormData({ ...formData, marca_id: e.target.value ? Number(e.target.value) : '' })}
+                required
+              >
+                <option value="">Selecciona una marca</option>
+                {marcas.map((marca: any) => (
+                  <option key={marca.id} value={marca.id}>
+                    {marca.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Modelo (año) *</label>
+              <input
+                type="number"
+                placeholder="2020"
+                className="input-base"
+                value={formData.modelo || ''}
+                onChange={(e) => setFormData({ ...formData, modelo: e.target.value ? Number(e.target.value) : '' })}
+                min="1900"
+                max="2100"
+                required
+              />
+            </div>
             <div className="flex gap-2">
               <button type="submit" className="btn-primary" disabled={createMutation.isPending}>
                 {createMutation.isPending ? 'Guardando...' : 'Guardar'}
               </button>
               <button
                 type="button"
-                className="btn-secondary"
+                className="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
                 onClick={() => setShowForm(false)}
               >
                 Cancelar
@@ -102,27 +122,38 @@ export default function ConfiguracionVehicleModule() {
         </div>
       )}
 
-      <div className="overflow-x-auto">
+      <div className="max-h-[400px] overflow-y-auto border border-neutral-200 rounded-lg">
         <table className="w-full">
-          <thead>
+          <thead className="sticky top-0 bg-white">
             <tr className="border-b border-neutral-200">
-              <th className="px-4 py-3 text-left text-sm font-semibold text-neutral-700">Nombre</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-neutral-700">Capacidad (gal)</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-neutral-700">Marca</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-neutral-700">Modelo</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-neutral-700">Estado</th>
               <th className="px-4 py-3 text-right text-sm font-semibold text-neutral-700">Acciones</th>
             </tr>
           </thead>
           <tbody>
-            {configs.map((config: any) => (
-              <tr key={config.id} className="border-b border-neutral-100 hover:bg-neutral-50">
-                <td className="px-4 py-3 text-sm text-neutral-900">{config.nombre}</td>
-                <td className="px-4 py-3 text-sm text-neutral-600">{config.capacidad_tanque}</td>
-                <td className="px-4 py-3 text-right">
-                  <button className="p-1 text-red-600 hover:bg-red-50 rounded">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {configs.map((config: any) => {
+              const marca = marcas.find((m: any) => m.id === config.marca_id);
+              return (
+                <tr key={config.id} className="border-b border-neutral-100 hover:bg-neutral-50">
+                  <td className="px-4 py-3 text-sm text-neutral-900">{marca?.nombre || 'Desconocida'}</td>
+                  <td className="px-4 py-3 text-sm text-neutral-600">{config.modelo}</td>
+                  <td className="px-4 py-3 text-sm">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      config.estado === 'activo' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                    }`}>
+                      {config.estado}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <button className="p-1 text-red-600 hover:bg-red-50 rounded">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

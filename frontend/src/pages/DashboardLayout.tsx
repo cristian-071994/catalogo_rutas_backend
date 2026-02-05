@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, Menu, X, BarChart3, Settings, BookOpen, Building2 } from 'lucide-react';
+import { LogOut, Menu, X, BarChart3, Settings, BookOpen, Building2, Shield } from 'lucide-react';
 import ResumenRutasPage from './ResumenRutasPage';
 import ConfiguracionPage from './ConfiguracionPage';
 import GuiaPage from './GuiaPage';
+import AdminPage from './AdminPage';
 
 export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -17,6 +18,10 @@ export default function DashboardLayout() {
     navigate('/login');
   };
 
+  const isSuperAdmin = usuario?.rol?.nombre === 'super_admin';
+  const isAdmin = usuario?.rol?.nombre === 'admin';
+  const canAccessConfig = isSuperAdmin || isAdmin;
+
   const menuItems = [
     { 
       id: 'resumen', 
@@ -24,12 +29,18 @@ export default function DashboardLayout() {
       path: '/dashboard/resumen',
       icon: BarChart3
     },
-    { 
+    ...(canAccessConfig ? [{ 
       id: 'config', 
       label: 'Configuración', 
       path: '/dashboard/configuracion',
       icon: Settings
-    },
+    }] : []),
+    ...(isSuperAdmin || isAdmin ? [{ 
+      id: 'admin', 
+      label: 'Administración', 
+      path: '/dashboard/admin',
+      icon: Shield
+    }] : []),
     { 
       id: 'guia', 
       label: 'Guía de Uso', 
@@ -89,7 +100,7 @@ export default function DashboardLayout() {
       </header>
 
       {/* Main Content */}
-      <div className="flex flex-1 max-w-7xl mx-auto w-full">
+      <div className="flex flex-1 w-full">
         {/* Sidebar */}
         <aside
           className={`
@@ -141,19 +152,22 @@ export default function DashboardLayout() {
         {/* Overlay para mobile */}
         {sidebarOpen && (
           <div
-            className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
+            className="fixed inset-0 bg-black/10 backdrop-blur-lg z-20 lg:hidden"
             onClick={() => setSidebarOpen(false)}
           />
         )}
 
         {/* Content */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 w-full">
-          <Routes>
-            <Route path="/resumen" element={<ResumenRutasPage />} />
-            <Route path="/configuracion/*" element={<ConfiguracionPage />} />
-            <Route path="/guia" element={<GuiaPage />} />
-            <Route path="/" element={<ResumenRutasPage />} />
-          </Routes>
+        <main className="flex-1 w-full overflow-x-hidden">
+          <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-4 sm:py-6 lg:py-8">
+            <Routes>
+              <Route path="/resumen" element={<ResumenRutasPage />} />
+              {canAccessConfig && <Route path="/configuracion/*" element={<ConfiguracionPage />} />}
+              {(isSuperAdmin || isAdmin) && <Route path="/admin/*" element={<AdminPage />} />}
+              <Route path="/guia" element={<GuiaPage />} />
+              <Route path="/" element={<ResumenRutasPage />} />
+            </Routes>
+          </div>
         </main>
       </div>
     </div>

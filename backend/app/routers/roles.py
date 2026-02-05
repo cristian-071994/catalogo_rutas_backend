@@ -36,13 +36,13 @@ router = APIRouter(
     summary="Listar Roles"
 )
 def listar_roles(
-    current_user: Usuario = Depends(require_role("super_admin")),
+    current_user: Usuario = Depends(require_role("super_admin", "admin")),
     db: Session = Depends(get_db)
 ):
     """
     Lista todos los roles del sistema.
     
-    ⚠️ Solo super administrador
+    ⚠️ Solo super administrador y administrador
     """
     roles = db.query(Rol).all()
     return roles

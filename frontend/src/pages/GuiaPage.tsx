@@ -44,11 +44,13 @@ export default function GuiaPage() {
                   </h3>
                   <p className="text-gray-600 mb-3">
                     Ve a <span className="font-semibold text-blue-600">Configuración {'>'} Precio Combustible</span>
+                    {' '}<span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-semibold">Solo Admin</span>
                   </p>
                   <ul className="list-disc list-inside space-y-2 text-gray-600 ml-4">
                     <li>Ingresa el precio actual del galón de combustible (ej: $9,500)</li>
                     <li>Este valor se usará para calcular costos de todas las rutas</li>
                     <li>Puedes actualizarlo cuando cambien los precios</li>
+                    <li className="text-amber-700 font-medium">⚠️ Solo usuarios Admin y Super Admin pueden configurar este valor</li>
                   </ul>
                 </div>
               </div>

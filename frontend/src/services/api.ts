@@ -178,33 +178,49 @@ class ApiClient {
   // Peajes
   async getPeajes() {
     const response = await this.client.get('/peajes/');
-    return response.data;
+    return response;
   }
 
-  async createPeaje(data: any) {
-    const response = await this.client.post('/peajes/', data);
+  async sincronizarPeajes() {
+    const response = await this.client.post('/peajes/sincronizar');
     return response.data;
   }
 
   // Configuración
   async getConfiguracionVehiculos() {
-    const response = await this.client.get('/configuracion_vehiculos/');
+    const response = await this.client.get('/configuracion-vehiculos/');
     return response.data;
   }
 
   async createConfiguracionVehiculo(data: any) {
-    const response = await this.client.post('/configuracion_vehiculos/', data);
+    const response = await this.client.post('/configuracion-vehiculos/', data);
     return response.data;
   }
 
   // Marcas
   async getMarcas() {
-    const response = await this.client.get('/marcas_vehiculos/');
+    const response = await this.client.get('/marcas-vehiculos/');
     return response.data;
   }
 
   async createMarca(data: any) {
-    const response = await this.client.post('/marcas_vehiculos/', data);
+    const response = await this.client.post('/marcas-vehiculos/', data);
+    return response.data;
+  }
+
+  // Rendimiento
+  async getRendimientos() {
+    const response = await this.client.get('/rendimiento-configuracion/');
+    return response.data;
+  }
+
+  async createRendimiento(data: any) {
+    const response = await this.client.post('/rendimiento-configuracion/', data);
+    return response.data;
+  }
+
+  async updateRendimiento(id: number, data: any) {
+    const response = await this.client.put(`/rendimiento-configuracion/${id}`, data);
     return response.data;
   }
 }

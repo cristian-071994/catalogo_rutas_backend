@@ -147,9 +147,9 @@ export default function TramosModule() {
       )}
 
       {selectedRuta && !isLoading && (
-        <div className="overflow-x-auto">
+        <div className="max-h-[400px] overflow-y-auto border border-neutral-200 rounded-lg">
           <table className="w-full">
-            <thead>
+            <thead className="sticky top-0 bg-white">
               <tr className="border-b border-neutral-200">
                 <th className="px-4 py-3 text-left text-sm font-semibold text-neutral-700">Orden</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-neutral-700">Origen → Destino</th>
