@@ -22,16 +22,16 @@ export default function RutasModule() {
   const { data: rutas = [], isLoading } = useQuery({
     queryKey: ['rutas'],
     queryFn: async () => {
-      const response = await api.getRutas();
-      return response.data?.items || response.data || [];
+      const data = await api.getRutas();
+      return data?.items || data || [];
     },
   });
 
   const { data: clientes = [] } = useQuery({
     queryKey: ['clientes'],
     queryFn: async () => {
-      const response = await api.getClientes();
-      return response.data?.items || response.data || [];
+      const data = await api.getClientes();
+      return data?.items || data || [];
     },
   });
 
@@ -146,7 +146,7 @@ export default function RutasModule() {
                   <td className="px-4 py-3 text-sm font-medium text-neutral-900">{ruta.nombre}</td>
                   <td className="px-4 py-3 text-sm text-neutral-600">{cliente?.nombre || 'N/A'}</td>
                   <td className="px-4 py-3 text-sm">
-                    {ruta.estado === 1 ? (
+                    {ruta.estado === 'activo' || ruta.estado === 1 || ruta.estado === true ? (
                       <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
                         Activo
                       </span>

@@ -131,13 +131,25 @@ class ApiClient {
   }
 
   // Vehículos
-  async getVehiculos() {
-    const response = await this.client.get('/vehiculos/');
+  async getVehiculos(includeInactivos?: boolean) {
+    const response = await this.client.get('/vehiculos/', {
+      params: includeInactivos ? { incluir_inactivos: true } : undefined,
+    });
     return response.data;
   }
 
   async createVehiculo(data: any) {
     const response = await this.client.post('/vehiculos/', data);
+    return response.data;
+  }
+
+  async updateVehiculo(id: number, data: any) {
+    const response = await this.client.put(`/vehiculos/${id}`, data);
+    return response.data;
+  }
+
+  async deleteVehiculo(id: number) {
+    const response = await this.client.delete(`/vehiculos/${id}`);
     return response.data;
   }
 
