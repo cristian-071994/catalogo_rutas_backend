@@ -6,6 +6,7 @@ import ResumenRutasPage from './ResumenRutasPage';
 import ConfiguracionPage from './ConfiguracionPage';
 import GuiaPage from './GuiaPage';
 import AdminPage from './AdminPage';
+import { canAccessConfig } from '../utils/permissions';
 
 export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -20,7 +21,7 @@ export default function DashboardLayout() {
 
   const isSuperAdmin = usuario?.rol?.nombre === 'super_admin';
   const isAdmin = usuario?.rol?.nombre === 'admin';
-  const canAccessConfig = isSuperAdmin || isAdmin;
+  const canAccessConfiguracion = canAccessConfig(usuario);
 
   const menuItems = [
     { 
@@ -29,7 +30,7 @@ export default function DashboardLayout() {
       path: '/dashboard/resumen',
       icon: BarChart3
     },
-    ...(canAccessConfig ? [{ 
+    ...(canAccessConfiguracion ? [{ 
       id: 'config', 
       label: 'Configuración', 
       path: '/dashboard/configuracion',
@@ -162,7 +163,7 @@ export default function DashboardLayout() {
           <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-4 sm:py-6 lg:py-8">
             <Routes>
               <Route path="/resumen" element={<ResumenRutasPage />} />
-              {canAccessConfig && <Route path="/configuracion/*" element={<ConfiguracionPage />} />}
+              {canAccessConfiguracion && <Route path="/configuracion/*" element={<ConfiguracionPage />} />}
               {(isSuperAdmin || isAdmin) && <Route path="/admin/*" element={<AdminPage />} />}
               <Route path="/guia" element={<GuiaPage />} />
               <Route path="/" element={<ResumenRutasPage />} />

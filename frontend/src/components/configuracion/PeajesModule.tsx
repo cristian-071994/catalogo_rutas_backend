@@ -1,25 +1,27 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../services/api';
+import { formatCOP, formatDateTime } from '../../utils/format';
 import { AlertCircle, RefreshCw, Loader } from 'lucide-react';
 
 export default function PeajesModule() {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const queryClient = useQueryClient();
 
   const { data: peajes = [], isLoading } = useQuery({
-    queryKey: ['peajes'],
+    queryKey: ['peajes-search', searchTerm],
     queryFn: async () => {
-      const response = await api.getPeajes();
-      return response.data?.items || response.data || [];
+      const data = await api.buscarPeajesPorNombre(searchTerm, 100);
+      return data?.items || data || [];
     },
   });
 
   const sincronizarMutation = useMutation({
     mutationFn: () => api.sincronizarPeajes(),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['peajes'] });
+      queryClient.invalidateQueries({ queryKey: ['peajes-search', searchTerm] });
       setSuccessMessage('Sincronización completada exitosamente');
       setError('');
       setTimeout(() => setSuccessMessage(''), 5000);
@@ -42,10 +44,21 @@ export default function PeajesModule() {
           onClick={handleSincronizar}
           className="btn-primary flex items-center gap-2"
           disabled={sincronizarMutation.isPending}
+          title="Consultar peajes desde la ANI"
         >
           <RefreshCw className={`w-5 h-5 ${sincronizarMutation.isPending ? 'animate-spin' : ''}`} />
           {sincronizarMutation.isPending ? 'Sincronizando...' : 'Consultar ANI'}
         </button>
+      </div>
+
+      <div>
+        <input
+          type="text"
+          placeholder="Buscar peaje por nombre..."
+          className="input-base"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
       </div>
 
       {error && (
@@ -76,6 +89,7 @@ export default function PeajesModule() {
                 <th className="px-4 py-3 text-left text-sm font-semibold text-neutral-700">Nombre Peaje</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-neutral-700">Categoría Tarifa</th>
                 <th className="px-4 py-3 text-right text-sm font-semibold text-neutral-700">Costo</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-neutral-700">Última Tarifa</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-neutral-700">Última Actualización</th>
               </tr>
             </thead>
@@ -85,19 +99,13 @@ export default function PeajesModule() {
                   <td className="px-4 py-3 text-sm font-medium text-neutral-900">{peaje.nombre_peaje || 'N/A'}</td>
                   <td className="px-4 py-3 text-sm text-neutral-600">{peaje.categoria_tarifa || 'N/A'}</td>
                   <td className="px-4 py-3 text-right text-sm font-medium text-neutral-900">
-                    ${(peaje.costo || 0).toLocaleString('es-CO', { minimumFractionDigits: 0 })}
+                    {formatCOP(peaje.costo)}
                   </td>
                   <td className="px-4 py-3 text-sm text-neutral-600">
-                    {peaje.ultima_actualizacion 
-                      ? new Date(peaje.ultima_actualizacion).toLocaleString('es-CO', {
-                          timeZone: 'America/Bogota',
-                          year: 'numeric',
-                          month: '2-digit',
-                          day: '2-digit',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })
-                      : 'N/A'}
+                    {formatDateTime(peaje.fecha_ultima_tarifa)}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-neutral-600">
+                    {formatDateTime(peaje.ultima_actualizacion)}
                   </td>
                 </tr>
               ))}
@@ -108,7 +116,7 @@ export default function PeajesModule() {
 
       {!isLoading && peajes.length === 0 && (
         <div className="text-center py-8 text-neutral-600">
-          No hay peajes registrados. Haz clic en "Consultar ANI" para sincronizar.
+          No hay peajes que coincidan con la búsqueda.
         </div>
       )}
     </div>

@@ -214,6 +214,9 @@ def actualizar_detalle_tramo(
             )
 
     # Actualizar campos
+    detalle.tramo_id = detalle_update.tramo_id
+    detalle.tipo_carga = detalle_update.tipo_carga
+    detalle.tipo_terreno = detalle_update.tipo_terreno
     detalle.kilometros = detalle_update.kilometros
     
     db.add(detalle)

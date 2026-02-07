@@ -1,6 +1,7 @@
 import axios from 'axios';
 import type { AxiosInstance } from 'axios';
 import type { AuthResponse } from '../types/index';
+import { mergeStoredUser } from '../utils/authStorage';
 
 const API_URL = 'http://localhost:8000/api/v1';
 
@@ -62,11 +63,14 @@ class ApiClient {
 
               localStorage.setItem('access_token', access_token);
               localStorage.setItem('refresh_token', newRefreshToken);
+              this.client.defaults.headers.common.Authorization = `Bearer ${access_token}`;
+              mergeStoredUser(response.data);
 
               this.isRefreshing = false;
               this.onRefreshed(access_token);
               this.refreshSubscribers = [];
 
+              originalRequest.headers.Authorization = `Bearer ${access_token}`;
               return this.client(originalRequest);
             } catch (refreshError) {
               this.isRefreshing = false;
@@ -109,6 +113,11 @@ class ApiClient {
     return response.data;
   }
 
+  async getMe() {
+    const response = await this.client.get('/me');
+    return response.data;
+  }
+
   async register(email: string, password: string, nombre_completo: string, empresa_nit: string): Promise<any> {
     const response = await this.client.post<any>('/registro', {
       email,
@@ -116,6 +125,11 @@ class ApiClient {
       nombre: nombre_completo,
       empresa_nit
     });
+    return response.data;
+  }
+
+  async getConfiguraciones() {
+    const response = await this.client.get('/configuracion/');
     return response.data;
   }
 
@@ -172,7 +186,14 @@ class ApiClient {
   }
 
   // Tramos
-  async getTramos(rutaId: number) {
+  async getTramos(includeInactivos?: boolean) {
+    const response = await this.client.get('/tramos/', {
+      params: includeInactivos ? { incluir_inactivos: true } : undefined,
+    });
+    return response.data;
+  }
+
+  async getTramosPorRuta(rutaId: number) {
     const response = await this.client.get(`/rutas/${rutaId}/tramos`);
     return response.data;
   }
@@ -187,10 +208,34 @@ class ApiClient {
     return response.data;
   }
 
+  async createTramoDetalle(data: any) {
+    const response = await this.client.post('/tramo-detalle/', data);
+    return response.data;
+  }
+
+  async updateTramoDetalle(detalleId: number, data: any) {
+    const response = await this.client.put(`/tramo-detalle/${detalleId}`, data);
+    return response.data;
+  }
+
+  async addTramoToRuta(rutaId: number, tramoId: number, orden: number) {
+    const response = await this.client.post(`/rutas/${rutaId}/tramos/${tramoId}`, null, {
+      params: { orden },
+    });
+    return response.data;
+  }
+
   // Peajes
   async getPeajes() {
     const response = await this.client.get('/peajes/');
     return response;
+  }
+
+  async buscarPeajesPorNombre(q: string, limite = 50) {
+    const response = await this.client.get('/peajes/buscar/por-nombre', {
+      params: { q, limite },
+    });
+    return response.data;
   }
 
   async sincronizarPeajes() {

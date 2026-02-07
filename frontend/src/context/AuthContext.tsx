@@ -25,7 +25,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     if (token && usuarioStored) {
       try {
-        setUsuario(JSON.parse(usuarioStored));
+        const parsedUsuario = JSON.parse(usuarioStored) as Usuario;
+        setUsuario(parsedUsuario);
+
+        if (typeof parsedUsuario.permisos === 'undefined') {
+          api.getMe()
+            .then((data: any) => {
+              const updatedUsuario: Usuario = {
+                id: data.id,
+                email: data.email,
+                nombre_completo: data.nombre,
+                activo: Boolean(data.activo),
+                rol: {
+                  id: 0,
+                  nombre: data.rol || '',
+                },
+                empresa: data.empresa_nombre || undefined,
+                permisos: Array.isArray(data.permisos) ? data.permisos : [],
+              };
+              localStorage.setItem('usuario', JSON.stringify(updatedUsuario));
+              setUsuario(updatedUsuario);
+            })
+            .catch((error) => {
+              console.error('Error loading /me:', error);
+            });
+        }
       } catch (error) {
         console.error('Error parsing stored usuario:', error);
         localStorage.removeItem('access_token');
@@ -54,7 +78,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           id: 0,
           nombre: response.usuario_rol
         },
-        empresa: response.empresa_nombre  // Guardamos la empresa
+        empresa: response.empresa_nombre,  // Guardamos la empresa
+        permisos: response.usuario_permisos || []
       };
       
       localStorage.setItem('usuario', JSON.stringify(usuario));

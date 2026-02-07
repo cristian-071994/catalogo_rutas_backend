@@ -12,6 +12,7 @@ from app.auth import (
     create_access_token,
     create_refresh_token,  # Nuevo
     get_current_user,
+    get_user_permissions,
 )
 from app.models.usuario import Usuario
 from app.models.empresa import Empresa
@@ -22,7 +23,8 @@ from app.schemas.auth import (
     UsuarioResponse,
     RegistroRequest,
     RegistroResponse,
-    AprobarUsuarioRequest
+    AprobarUsuarioRequest,
+    RefreshTokenRequest
 )
 from app.schemas.empresa import OnboardingRequest, OnboardingResponse, CrearEmpresaConAdminRequest, CrearEmpresaConAdminResponse, EmpresaResponse
 from passlib.context import CryptContext
@@ -186,6 +188,7 @@ def login(
     
     access_token = create_access_token(data=token_data)
     refresh_token = create_refresh_token(data=token_data)
+    permisos = get_user_permissions(usuario)
 
     return TokenResponse(
         access_token=access_token,
@@ -194,12 +197,13 @@ def login(
         usuario_nombre=usuario.nombre,
         usuario_rol=usuario.rol.nombre if usuario.rol else "consultor",
         empresa_nombre=usuario.empresa.nombre if usuario.empresa else "Sistema",
+        usuario_permisos=permisos,
     )
 
 
 @router.post("/refresh", response_model=TokenResponse, summary="Renovar Token")
 def refresh_access_token(
-    refresh_token: str,
+    payload: RefreshTokenRequest,
     db: Session = Depends(get_db)
 ):
     """
@@ -227,6 +231,8 @@ def refresh_access_token(
     from jose import jwt, JWTError
     from app.auth import SECRET_KEY, ALGORITHM, create_access_token
     
+    refresh_token = payload.refresh_token
+
     try:
         # Decodificar el refresh token
         payload = jwt.decode(refresh_token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -284,6 +290,7 @@ def refresh_access_token(
     }
     
     new_access_token = create_access_token(data=token_data)
+    permisos = get_user_permissions(usuario)
     
     return TokenResponse(
         access_token=new_access_token,
@@ -292,6 +299,7 @@ def refresh_access_token(
         usuario_nombre=usuario.nombre,
         usuario_rol=usuario.rol.nombre if usuario.rol else "consultor",
         empresa_nombre=usuario.empresa.nombre if usuario.empresa else "Sistema",
+        usuario_permisos=permisos,
     )
 
 
@@ -315,6 +323,7 @@ def get_me(current_user: Usuario = Depends(get_current_user)):
         rol=current_user.rol.nombre if current_user.rol else None,
         activo=current_user.activo,
         aprobado=current_user.aprobado,
+        permisos=get_user_permissions(current_user),
     )
 
 

@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useAuth } from '../context/AuthContext';
 import PrecioCombustibleModule from '../components/configuracion/PrecioCombustibleModule';
 import ClientesModule from '../components/configuracion/ClientesModule';
 import MarcasModule from '../components/configuracion/MarcasModule';
@@ -8,21 +9,36 @@ import RendimientoModule from '../components/configuracion/RendimientoModule';
 import RutasModule from '../components/configuracion/RutasModule';
 import TramosModule from '../components/configuracion/TramosModule';
 import PeajesModule from '../components/configuracion/PeajesModule';
+import { hasAnyPermission } from '../utils/permissions';
 
 export default function ConfiguracionPage() {
+  const { usuario } = useAuth();
   const [activeTab, setActiveTab] = useState('precio-combustible');
 
   const tabs = [
-    { id: 'precio-combustible', label: '💰 Precio Combustible', icon: '💰' },
-    { id: 'clientes', label: '👥 Clientes', icon: '👥' },
-    { id: 'marcas', label: '🏷️ Marcas', icon: '🏷️' },
-    { id: 'config-vehiculo', label: '⚙️ Config Vehículo', icon: '⚙️' },
-    { id: 'rendimiento', label: '⛽ Rendimiento', icon: '⛽' },
-    { id: 'vehiculos', label: '🚗 Vehículos', icon: '🚗' },
-    { id: 'rutas', label: '🗺️ Rutas', icon: '🗺️' },
-    { id: 'tramos', label: '🛣️ Tramos', icon: '🛣️' },
-    { id: 'peajes', label: '🚧 Peajes', icon: '🚧' },
+    { id: 'precio-combustible', label: '💰 Precio Combustible', icon: '💰', permissions: ['editar_configuracion'] },
+    { id: 'clientes', label: '👥 Clientes', icon: '👥', permissions: ['ver_clientes', 'crear_cliente', 'editar_cliente', 'eliminar_cliente'] },
+    { id: 'marcas', label: '🏷️ Marcas', icon: '🏷️', permissions: ['ver_marcas', 'crear_marca', 'editar_marca', 'eliminar_marca'] },
+    { id: 'config-vehiculo', label: '⚙️ Config Vehículo', icon: '⚙️', permissions: ['ver_configuracion_vehiculos', 'crear_configuracion_vehiculo', 'editar_configuracion_vehiculo', 'eliminar_configuracion_vehiculo'] },
+    { id: 'rendimiento', label: '⛽ Rendimiento', icon: '⛽', permissions: ['ver_rendimiento', 'crear_rendimiento', 'editar_rendimiento', 'eliminar_rendimiento'] },
+    { id: 'vehiculos', label: '🚗 Vehículos', icon: '🚗', permissions: ['ver_vehiculos', 'crear_vehiculo', 'editar_vehiculo', 'eliminar_vehiculo'] },
+    { id: 'rutas', label: '🗺️ Rutas', icon: '🗺️', permissions: ['ver_rutas', 'crear_ruta', 'editar_ruta', 'eliminar_ruta'] },
+    { id: 'tramos', label: '🛣️ Tramos', icon: '🛣️', permissions: ['ver_tramos', 'crear_tramo', 'editar_tramo', 'eliminar_tramo', 'ver_tramo_detalle', 'crear_tramo_detalle', 'editar_tramo_detalle', 'eliminar_tramo_detalle'] },
+    { id: 'peajes', label: '🚧 Peajes', icon: '🚧', permissions: ['ver_peajes', 'crear_peaje', 'editar_peaje', 'eliminar_peaje'] },
   ];
+
+  const availableTabs = tabs.filter((tab) => hasAnyPermission(usuario, tab.permissions));
+
+  useEffect(() => {
+    if (availableTabs.length === 0) {
+      return;
+    }
+
+    const isActiveAvailable = availableTabs.some((tab) => tab.id === activeTab);
+    if (!isActiveAvailable) {
+      setActiveTab(availableTabs[0].id);
+    }
+  }, [activeTab, availableTabs]);
 
   return (
     <div className="w-full min-w-0 space-y-6 overflow-x-hidden">
@@ -35,7 +51,7 @@ export default function ConfiguracionPage() {
       <div className="w-full min-w-0 overflow-hidden">
         <div className="bg-white border border-neutral-200 rounded-t-lg">
           <div className="tabs-container flex gap-2 sm:gap-3 overflow-x-auto">
-            {tabs.map((tab) => (
+            {availableTabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
@@ -55,15 +71,23 @@ export default function ConfiguracionPage() {
       {/* Content */}
       <div className="w-full min-w-0">
         <div className="bg-white border border-neutral-200 rounded-b-lg p-4 sm:p-6 lg:p-8">
-          {activeTab === 'precio-combustible' && <PrecioCombustibleModule />}
-          {activeTab === 'clientes' && <ClientesModule />}
-          {activeTab === 'marcas' && <MarcasModule />}
-          {activeTab === 'config-vehiculo' && <ConfiguracionVehicleModule />}
-          {activeTab === 'rendimiento' && <RendimientoModule />}
-          {activeTab === 'vehiculos' && <VehiculosModule />}
-          {activeTab === 'rutas' && <RutasModule />}
-          {activeTab === 'tramos' && <TramosModule />}
-          {activeTab === 'peajes' && <PeajesModule />}
+          {availableTabs.length === 0 ? (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-900">
+              No tienes permisos para acceder a los modulos de configuracion.
+            </div>
+          ) : (
+            <>
+              {activeTab === 'precio-combustible' && <PrecioCombustibleModule />}
+              {activeTab === 'clientes' && <ClientesModule />}
+              {activeTab === 'marcas' && <MarcasModule />}
+              {activeTab === 'config-vehiculo' && <ConfiguracionVehicleModule />}
+              {activeTab === 'rendimiento' && <RendimientoModule />}
+              {activeTab === 'vehiculos' && <VehiculosModule />}
+              {activeTab === 'rutas' && <RutasModule />}
+              {activeTab === 'tramos' && <TramosModule />}
+              {activeTab === 'peajes' && <PeajesModule />}
+            </>
+          )}
         </div>
       </div>
 

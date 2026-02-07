@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import { AlertCircle, Plus, Trash2, Loader } from 'lucide-react';
 
@@ -9,6 +10,8 @@ interface FormDataConfigVehiculo {
 }
 
 export default function ConfiguracionVehicleModule() {
+  const { usuario: currentUser } = useAuth();
+  const isSuperAdmin = currentUser?.rol?.nombre === 'super_admin';
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState<FormDataConfigVehiculo>({
     marca_id: '',
@@ -61,6 +64,7 @@ export default function ConfiguracionVehicleModule() {
       <button
         onClick={() => setShowForm(!showForm)}
         className="btn-primary flex items-center gap-2"
+        title="Crear configuración de vehículo"
       >
         <Plus className="w-5 h-5" />
         Nueva Configuración
@@ -107,13 +111,14 @@ export default function ConfiguracionVehicleModule() {
               />
             </div>
             <div className="flex gap-2">
-              <button type="submit" className="btn-primary" disabled={createMutation.isPending}>
+              <button type="submit" className="btn-primary" disabled={createMutation.isPending} title="Guardar configuración">
                 {createMutation.isPending ? 'Guardando...' : 'Guardar'}
               </button>
               <button
                 type="button"
                 className="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
                 onClick={() => setShowForm(false)}
+                title="Cancelar"
               >
                 Cancelar
               </button>
@@ -129,7 +134,9 @@ export default function ConfiguracionVehicleModule() {
               <th className="px-4 py-3 text-left text-sm font-semibold text-neutral-700">Marca</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-neutral-700">Modelo</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-neutral-700">Estado</th>
-              <th className="px-4 py-3 text-right text-sm font-semibold text-neutral-700">Acciones</th>
+              {isSuperAdmin && (
+                <th className="px-4 py-3 text-right text-sm font-semibold text-neutral-700">Acciones</th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -146,11 +153,13 @@ export default function ConfiguracionVehicleModule() {
                       {config.estado}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right">
-                    <button className="p-1 text-red-600 hover:bg-red-50 rounded">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </td>
+                  {isSuperAdmin && (
+                    <td className="px-4 py-3 text-right">
+                      <button className="p-1 text-red-600 hover:bg-red-50 rounded" title="Eliminar configuración">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  )}
                 </tr>
               );
             })}

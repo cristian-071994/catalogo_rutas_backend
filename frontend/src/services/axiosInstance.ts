@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { mergeStoredUser } from '../utils/authStorage';
 
 const API_URL = 'http://localhost:8000/api/v1';
 
@@ -68,6 +69,8 @@ axiosInstance.interceptors.response.use(
         // Guardar nuevos tokens
         localStorage.setItem('access_token', access_token);
         localStorage.setItem('refresh_token', new_refresh_token);
+        axiosInstance.defaults.headers['Authorization'] = `Bearer ${access_token}`;
+        mergeStoredUser(response.data);
         
         // Actualizar el header del request original
         originalRequest.headers['Authorization'] = 'Bearer ' + access_token;

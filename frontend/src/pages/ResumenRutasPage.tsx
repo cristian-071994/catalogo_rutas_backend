@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../services/api';
+import { formatCOP, formatKm } from '../utils/format';
 import type { Cliente, Vehiculo, Ruta, ResumenRutaDetallado } from '../types/index';
 import { AlertCircle, Loader } from 'lucide-react';
 
@@ -155,7 +156,7 @@ export default function ResumenRutasPage() {
               </div>
               <div>
                 <p className="text-sm text-neutral-600">Distancia Total</p>
-                <p className="font-medium text-neutral-900">{resumen.distancia_total_km} km</p>
+                <p className="font-medium text-neutral-900">{formatKm(resumen.distancia_total_km)} km</p>
               </div>
               <div>
                 <p className="text-sm text-neutral-600">Vehículo</p>
@@ -173,18 +174,18 @@ export default function ResumenRutasPage() {
             </div>
             <div className="card">
               <p className="text-sm text-neutral-600 mb-1">Costo Combustible</p>
-              <p className="text-2xl font-bold text-neutral-900">$ {resumen.costo_combustible.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-neutral-900">{formatCOP(resumen.costo_combustible)}</p>
             </div>
             <div className="card">
               <p className="text-sm text-neutral-600 mb-1">Costo Peajes</p>
-              <p className="text-2xl font-bold text-neutral-900">$ {resumen.costo_peajes_total.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-neutral-900">{formatCOP(resumen.costo_peajes_total)}</p>
             </div>
           </div>
 
           {/* Costo Total */}
           <div className="card bg-neutral-900 text-white">
             <p className="text-sm opacity-90 mb-2">COSTO TOTAL DE LA RUTA</p>
-            <p className="text-4xl font-bold">$ {resumen.costo_total.toFixed(2)}</p>
+            <p className="text-4xl font-bold">{formatCOP(resumen.costo_total)}</p>
           </div>
 
           {/* Detalles de Tramos */}
@@ -201,7 +202,7 @@ export default function ResumenRutasPage() {
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm text-neutral-600">{tramo.distancia_km} km</p>
+                      <p className="text-sm text-neutral-600">{formatKm(tramo.distancia_km)} km</p>
                     </div>
                   </div>
                   
@@ -212,13 +213,13 @@ export default function ResumenRutasPage() {
                         {tramo.peajes.map((peaje, pIdx) => (
                           <div key={pIdx} className="flex justify-between text-sm">
                             <span className="text-neutral-600">{peaje.nombre} ({peaje.sector})</span>
-                            <span className="font-medium text-neutral-900">$ {peaje.valor.toFixed(2)}</span>
+                            <span className="font-medium text-neutral-900">{formatCOP(peaje.valor)}</span>
                           </div>
                         ))}
                       </div>
                       <div className="border-t border-neutral-200 mt-2 pt-2 flex justify-between font-medium">
                         <span>Subtotal peajes:</span>
-                        <span>$ {tramo.costo_peajes.toFixed(2)}</span>
+                        <span>{formatCOP(tramo.costo_peajes)}</span>
                       </div>
                     </div>
                   )}

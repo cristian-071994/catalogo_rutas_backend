@@ -9,14 +9,17 @@ export interface Usuario {
     id: number;
     nombre: string;
   };
+  permisos?: string[];
 }
 
 export interface AuthResponse {
   access_token: string;
+  refresh_token: string;
   token_type: string;
   usuario_nombre: string;  // Lo que realmente devuelve el backend
   usuario_rol: string;     // Lo que realmente devuelve el backend
   empresa_nombre: string;  // Nombre de la empresa
+  usuario_permisos: string[];
 }
 
 // Tipos de entidades

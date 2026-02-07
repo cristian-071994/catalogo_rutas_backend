@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, Fragment } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../services/api';
-import { AlertCircle, Plus, Trash2, Loader } from 'lucide-react';
+import { AlertCircle, Plus, Loader, X } from 'lucide-react';
+import { formatKm } from '../../utils/format';
 
 interface FormDataRuta {
   nombre: string;
@@ -17,6 +18,10 @@ export default function RutasModule() {
     cliente_id: 0,
   });
   const [error, setError] = useState('');
+  const [activeRutaId, setActiveRutaId] = useState<number | null>(null);
+  const [selectedTramoId, setSelectedTramoId] = useState<number | ''>('');
+  const [orden, setOrden] = useState<number>(1);
+  const [tramosModalRuta, setTramosModalRuta] = useState<any | null>(null);
   const queryClient = useQueryClient();
 
   const { data: rutas = [], isLoading } = useQuery({
@@ -35,6 +40,14 @@ export default function RutasModule() {
     },
   });
 
+  const { data: tramos = [] } = useQuery({
+    queryKey: ['tramos'],
+    queryFn: async () => {
+      const data = await api.getTramos();
+      return data?.items || data || [];
+    },
+  });
+
   const createMutation = useMutation({
     mutationFn: (data: FormDataRuta) => api.createRuta(data),
     onSuccess: () => {
@@ -49,6 +62,22 @@ export default function RutasModule() {
     },
   });
 
+  const addTramoMutation = useMutation({
+    mutationFn: ({ rutaId, tramoId, orden }: { rutaId: number; tramoId: number; orden: number }) =>
+      api.addTramoToRuta(rutaId, tramoId, orden),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['rutas'] });
+      setSelectedTramoId('');
+      setOrden(1);
+      setActiveRutaId(null);
+      setError('');
+    },
+    onError: (err: any) => {
+      setError(err.response?.data?.detail || 'Error al agregar tramo a la ruta');
+      setTimeout(() => setError(''), 10000);
+    },
+  });
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!formData.nombre || !formData.descripcion || !formData.cliente_id) {
@@ -56,6 +85,24 @@ export default function RutasModule() {
       return;
     }
     createMutation.mutate(formData);
+  };
+
+  const handleAddTramo = (rutaId: number) => {
+    setActiveRutaId((prev) => (prev === rutaId ? null : rutaId));
+    setSelectedTramoId('');
+    setOrden(1);
+  };
+
+  const handleSubmitTramo = (rutaId: number) => {
+    if (!selectedTramoId) {
+      setError('Selecciona un tramo');
+      return;
+    }
+    if (!orden || orden <= 0) {
+      setError('El orden debe ser mayor a 0');
+      return;
+    }
+    addTramoMutation.mutate({ rutaId, tramoId: Number(selectedTramoId), orden });
   };
 
   if (isLoading) {
@@ -67,6 +114,7 @@ export default function RutasModule() {
       <button
         onClick={() => setShowForm(!showForm)}
         className="btn-primary flex items-center gap-2"
+        title="Crear ruta"
       >
         <Plus className="w-5 h-5" />
         Nueva Ruta
@@ -113,13 +161,14 @@ export default function RutasModule() {
               ))}
             </select>
             <div className="flex gap-2">
-              <button type="submit" className="btn-primary" disabled={createMutation.isPending}>
+              <button type="submit" className="btn-primary" disabled={createMutation.isPending} title="Guardar ruta">
                 {createMutation.isPending ? 'Guardando...' : 'Guardar'}
               </button>
               <button
                 type="button"
                 className="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50"
                 onClick={() => setShowForm(false)}
+                title="Cancelar"
               >
                 Cancelar
               </button>
@@ -134,29 +183,101 @@ export default function RutasModule() {
             <tr className="border-b border-neutral-200">
               <th className="px-4 py-3 text-left text-sm font-semibold text-neutral-700">Nombre</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-neutral-700">Cliente</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-neutral-700">Tramos</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-neutral-700">Estado</th>
+              <th className="px-4 py-3 text-right text-sm font-semibold text-neutral-700">Acciones</th>
             </tr>
           </thead>
           <tbody>
             {rutas.map((ruta: any) => {
               const cliente = clientes.find((c: any) => c.id === ruta.cliente_id);
-              
+              const tramoCount = Array.isArray(ruta.tramos) ? ruta.tramos.length : 0;
+
               return (
-                <tr key={ruta.id} className="border-b border-neutral-100 hover:bg-neutral-50">
-                  <td className="px-4 py-3 text-sm font-medium text-neutral-900">{ruta.nombre}</td>
-                  <td className="px-4 py-3 text-sm text-neutral-600">{cliente?.nombre || 'N/A'}</td>
-                  <td className="px-4 py-3 text-sm">
-                    {ruta.estado === 'activo' || ruta.estado === 1 || ruta.estado === true ? (
-                      <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
-                        Activo
-                      </span>
-                    ) : (
-                      <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">
-                        Inactivo
-                      </span>
-                    )}
-                  </td>
-                </tr>
+                <Fragment key={ruta.id}>
+                  <tr className="border-b border-neutral-100 hover:bg-neutral-50">
+                    <td className="px-4 py-3 text-sm font-medium text-neutral-900">{ruta.nombre}</td>
+                    <td className="px-4 py-3 text-sm text-neutral-600">{cliente?.nombre || 'N/A'}</td>
+                    <td className="px-4 py-3 text-sm text-neutral-600">
+                      <button
+                        type="button"
+                        className="text-blue-600 hover:text-blue-700"
+                        onClick={() => setTramosModalRuta(ruta)}
+                        title="Ver tramos de la ruta"
+                      >
+                        {tramoCount}
+                      </button>
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      {ruta.estado === 'activo' || ruta.estado === 1 || ruta.estado === true ? (
+                        <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                          Activo
+                        </span>
+                      ) : (
+                        <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">
+                          Inactivo
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        type="button"
+                        onClick={() => handleAddTramo(ruta.id)}
+                        className="text-sm text-blue-600 hover:text-blue-700"
+                        title="Agregar tramo a la ruta"
+                      >
+                        Agregar tramo a ruta
+                      </button>
+                    </td>
+                  </tr>
+                  {activeRutaId === ruta.id && (
+                    <tr className="bg-neutral-50">
+                      <td colSpan={5} className="px-4 py-4">
+                        <div className="grid gap-3 sm:grid-cols-4 items-center">
+                          <select
+                            className="input-base sm:col-span-2"
+                            value={selectedTramoId}
+                            onChange={(e) => setSelectedTramoId(e.target.value ? Number(e.target.value) : '')}
+                          >
+                            <option value="">-- Selecciona un tramo --</option>
+                            {tramos.map((tramo: any) => (
+                              <option key={tramo.id} value={tramo.id}>
+                                {tramo.origen} → {tramo.destino}
+                              </option>
+                            ))}
+                          </select>
+                          <input
+                            type="number"
+                            className="input-base"
+                            min={1}
+                            value={orden}
+                            onChange={(e) => setOrden(Number(e.target.value))}
+                            placeholder="Orden"
+                          />
+                          <div className="flex gap-2 justify-end">
+                            <button
+                              type="button"
+                              className="btn-primary"
+                              onClick={() => handleSubmitTramo(ruta.id)}
+                              disabled={addTramoMutation.isPending}
+                              title="Agregar tramo"
+                            >
+                              {addTramoMutation.isPending ? 'Guardando...' : 'Agregar'}
+                            </button>
+                            <button
+                              type="button"
+                              className="px-3 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50"
+                              onClick={() => setActiveRutaId(null)}
+                              title="Cancelar"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
               );
             })}
           </tbody>
@@ -166,6 +287,55 @@ export default function RutasModule() {
       {!isLoading && rutas.length === 0 && (
         <div className="text-center py-8 text-neutral-600">
           No hay rutas registradas
+        </div>
+      )}
+
+      {tramosModalRuta && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full">
+            <div className="flex items-center justify-between border-b px-6 py-4">
+              <div>
+                <h3 className="text-lg font-semibold text-neutral-900">Tramos de la ruta</h3>
+                <p className="text-sm text-neutral-600">{tramosModalRuta.nombre}</p>
+              </div>
+              <button
+                type="button"
+                className="text-neutral-500 hover:text-neutral-700"
+                onClick={() => setTramosModalRuta(null)}
+                title="Cerrar"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6">
+              {(tramosModalRuta.tramos || []).length === 0 && (
+                <p className="text-sm text-neutral-600">No hay tramos asignados.</p>
+              )}
+              {(tramosModalRuta.tramos || [])
+                .slice()
+                .sort((a: any, b: any) => a.orden - b.orden)
+                .map((tramoRuta: any) => (
+                  <div key={tramoRuta.id} className="border border-neutral-200 rounded-lg p-3 mb-3">
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm text-neutral-700">
+                        <span className="font-semibold">Orden {tramoRuta.orden}</span>
+                        <span className="mx-2">·</span>
+                        {tramoRuta.tramo?.origen} → {tramoRuta.tramo?.destino}
+                      </div>
+                      <div className="text-sm text-neutral-500">
+                        {formatKm(
+                          (tramoRuta.tramo?.detalles || []).reduce(
+                            (acc: number, detalle: any) => acc + Number(detalle.kilometros || 0),
+                            0
+                          )
+                        )}{' '}
+                        km
+                      </div>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
         </div>
       )}
     </div>

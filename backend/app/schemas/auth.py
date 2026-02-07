@@ -17,6 +17,12 @@ class TokenResponse(BaseModel):
     usuario_nombre: str
     usuario_rol: str
     empresa_nombre: str  # Agregamos nombre de empresa
+    usuario_permisos: list[str] = []
+
+
+class RefreshTokenRequest(BaseModel):
+    """Esquema para refrescar token"""
+    refresh_token: str
 
 
 class RegistroRequest(BaseModel):
@@ -65,6 +71,7 @@ class UsuarioResponse(BaseModel):
     rol: Optional[str] = None
     activo: int
     aprobado: int
+    permisos: Optional[list[str]] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
