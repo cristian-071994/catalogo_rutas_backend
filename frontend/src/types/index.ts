@@ -95,33 +95,66 @@ export interface TramoDetalle {
 }
 
 // Respuesta de resumen de ruta
-export interface PeajeResumen {
-  id: number;
-  nombre: string;
-  valor: number;
-  sector: string;
-}
-
-export interface TramoResumen {
-  id: number;
-  origen: string;
-  destino: string;
-  distancia_km: number;
-  costo_peajes: number;
-  cantidad_peajes: number;
-  peajes: PeajeResumen[];
-}
-
 export interface ResumenRutaDetallado {
-  ruta_id: number;
-  cliente_nombre: string;
-  origen: string;
-  destino: string;
-  distancia_total_km: number;
-  vehiculo_placa: string;
-  consumo_galones: number;
-  costo_combustible: number;
-  costo_peajes_total: number;
-  costo_total: number;
-  tramos: TramoResumen[];
+  ruta: {
+    id: number;
+    nombre: string;
+    cliente: string;
+  };
+  vehiculo: {
+    placa: string;
+  };
+  configuracion_vehiculo: {
+    marca: string;
+    modelo: number;
+    rendimientos_configurados: Record<string, number>;
+  };
+  resumen_distancia: {
+    km_totales: number;
+  };
+  resumen_combustible: {
+    precio_galon: number;
+    galones_totales_requeridos: number;
+    costo_total_combustible: number;
+  };
+  resumen_peajes: {
+    cantidad_peajes: number;
+    costo_total_peajes: number;
+    detalles_peajes: ResumenPeajeDetalle[];
+  };
+  tramos_detalle: ResumenTramoDetalle[];
+  costo_total_ruta: {
+    km_totales: number;
+    galones_requeridos: number;
+    costo_combustible: number;
+    costo_peajes: number;
+    costo_total: number;
+  };
+}
+
+export interface ResumenPeajeDetalle {
+  peaje_id: number;
+  nombre: string;
+  costo: number;
+  sector: string | null;
+}
+
+export interface ResumenTramoDetalleItem {
+  tipo_carga: string;
+  tipo_terreno: string;
+  kilometros: number;
+  rendimiento_km_galon: number;
+  galones_necesarios: number;
+}
+
+export interface ResumenTramoDetalle {
+  tramo_id: number;
+  nombre: string;
+  orden: number;
+  km_totales: number;
+  galones_totales: number;
+  cantidad_peajes: number;
+  costo_peajes: number;
+  peajes: ResumenPeajeDetalle[];
+  detalles: ResumenTramoDetalleItem[];
 }

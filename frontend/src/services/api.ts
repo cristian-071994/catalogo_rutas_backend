@@ -178,9 +178,12 @@ class ApiClient {
     return response.data;
   }
 
-  async getResumenRuta(rutaId: number, vehiculoId: number) {
+  async getResumenRuta(rutaId: number, vehiculoId: number, precioGalon?: number) {
     const response = await this.client.get(`/rutas/${rutaId}/resumen`, {
-      params: { vehiculo_id: vehiculoId },
+      params: {
+        vehiculo_id: vehiculoId,
+        ...(precioGalon ? { precio_galon: precioGalon } : {}),
+      },
     });
     return response.data;
   }
