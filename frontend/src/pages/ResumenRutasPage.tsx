@@ -13,19 +13,28 @@ export default function ResumenRutasPage() {
   const [error, setError] = useState('');
   const [isLoadingResumen, setIsLoadingResumen] = useState(false);
 
-  const { data: clientes } = useQuery({
+  const { data: clientes = [] } = useQuery({
     queryKey: ['clientes'],
-    queryFn: () => api.getClientes(),
+    queryFn: async () => {
+      const data = await api.getClientes();
+      return data?.items || data || [];
+    },
   });
 
-  const { data: vehiculos } = useQuery({
+  const { data: vehiculos = [] } = useQuery({
     queryKey: ['vehiculos'],
-    queryFn: () => api.getVehiculos(),
+    queryFn: async () => {
+      const data = await api.getVehiculos();
+      return data?.items || data || [];
+    },
   });
 
-  const { data: rutas } = useQuery({
+  const { data: rutas = [] } = useQuery({
     queryKey: ['rutas'],
-    queryFn: () => api.getRutas(),
+    queryFn: async () => {
+      const data = await api.getRutas();
+      return data?.items || data || [];
+    },
   });
 
   const rutasDelCliente = rutas?.filter((r: Ruta) => r.cliente_id === selectedCliente) || [];
@@ -114,7 +123,7 @@ export default function ResumenRutasPage() {
             <option value="">-- Selecciona una ruta --</option>
             {rutasDelCliente.map((r: Ruta) => (
               <option key={r.id} value={r.id}>
-                {r.origen} → {r.destino}
+                  {r.nombre || `${r.origen || ''} → ${r.destino || ''}`.trim()}
               </option>
             ))}
           </select>

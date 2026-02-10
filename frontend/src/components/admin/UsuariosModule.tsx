@@ -55,8 +55,8 @@ export default function UsuariosModule() {
   // Password change form
   const [passwordData, setPasswordData] = useState({
     password_actual: '',
-    password_nuevo: '',
-    password_confirmacion: '',
+    password_nueva: '',
+    password_confirmar: '',
   });
 
   useEffect(() => {
@@ -135,18 +135,19 @@ export default function UsuariosModule() {
     setError('');
     setSuccess('');
 
-    if (passwordData.password_nuevo !== passwordData.password_confirmacion) {
+    if (passwordData.password_nueva !== passwordData.password_confirmar) {
       setError('Las contraseñas no coinciden');
       return;
     }
 
     try {
-      await axiosInstance.put('/usuarios/me/password', {
+      await axiosInstance.put('/usuarios/cambiar-contraseña', {
         password_actual: passwordData.password_actual,
-        password_nuevo: passwordData.password_nuevo,
+        password_nueva: passwordData.password_nueva,
+        password_confirmar: passwordData.password_confirmar,
       });
       setSuccess('Contraseña actualizada correctamente');
-      setPasswordData({ password_actual: '', password_nuevo: '', password_confirmacion: '' });
+      setPasswordData({ password_actual: '', password_nueva: '', password_confirmar: '' });
       setShowPasswordForm(false);
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Error al cambiar la contraseña');
@@ -283,16 +284,16 @@ export default function UsuariosModule() {
 
             <PasswordInput
               label="Nueva Contraseña *"
-              value={passwordData.password_nuevo}
-              onChange={(e) => setPasswordData({ ...passwordData, password_nuevo: e.target.value })}
+              value={passwordData.password_nueva}
+              onChange={(e) => setPasswordData({ ...passwordData, password_nueva: e.target.value })}
               required
               minLength={6}
             />
 
             <PasswordInput
               label="Confirmar Nueva Contraseña *"
-              value={passwordData.password_confirmacion}
-              onChange={(e) => setPasswordData({ ...passwordData, password_confirmacion: e.target.value })}
+              value={passwordData.password_confirmar}
+              onChange={(e) => setPasswordData({ ...passwordData, password_confirmar: e.target.value })}
               required
               minLength={6}
             />

@@ -59,6 +59,8 @@ export interface MarcaVehiculo {
 export interface Ruta {
   id: number;
   cliente_id: number;
+  nombre?: string;
+  descripcion?: string;
   origen: string;
   destino: string;
   distancia_km: number;
