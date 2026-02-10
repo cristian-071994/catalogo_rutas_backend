@@ -54,14 +54,6 @@ def listar_detalles_tramo(
             detail="Tramo no encontrado"
         )
     
-    # Multi-tenancy: verificar acceso al tramo
-    if current_user.rol and current_user.rol.nombre != "super_admin":
-        if tramo.empresa_id != current_user.empresa_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="No tienes permiso para acceder a este recurso"
-            )
-
     query = db.query(TramoDetalle).filter(TramoDetalle.tramo_id == tramo_id)
     
     if not incluir_inactivos:
@@ -91,14 +83,6 @@ def obtener_detalle(
             detail="Detalle de tramo no encontrado"
         )
     
-    # Multi-tenancy: verificar acceso al tramo asociado
-    if current_user.rol and current_user.rol.nombre != "super_admin":
-        if detalle.tramo.empresa_id != current_user.empresa_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="No tienes permiso para acceder a este recurso"
-            )
-
     return detalle
 
 

@@ -11,7 +11,7 @@ from app.models.tramo_peaje import TramoPeaje
 from app.models.usuario import Usuario
 from app.schemas.tramo import TramoResponse, TramoCreate, TramoUpdate
 from app.models.enums import EstadoGeneral
-from app.auth import get_current_user, require_permission
+from app.auth import get_current_user, require_permission, require_role
 
 router = APIRouter(
     prefix="/tramos",
@@ -40,10 +40,6 @@ def listar_tramos(
     """
     query = db.query(Tramo)
     
-    # Multi-tenancy: filtrar por empresa excepto super_admin
-    if current_user.rol and current_user.rol.nombre != "super_admin":
-        query = query.filter(Tramo.empresa_id == current_user.empresa_id)
-    
     if not incluir_inactivos:
         query = query.filter(Tramo.estado == EstadoGeneral.activo)
     
@@ -69,14 +65,6 @@ def obtener_tramo(
             detail="Tramo no encontrado"
         )
 
-    # Multi-tenancy: verificar pertenencia a empresa excepto super_admin
-    if current_user.rol and current_user.rol.nombre != "super_admin":
-        if tramo.empresa_id != current_user.empresa_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="No tienes permiso para acceder a este recurso"
-            )
-
     return tramo
 
 
@@ -92,7 +80,7 @@ def obtener_tramo(
 )
 def crear_tramo(
     tramo: TramoCreate,
-    current_user: Usuario = Depends(require_permission("crear_tramo")),
+    current_user: Usuario = Depends(require_role("admin", "super_admin")),
     db: Session = Depends(get_db)
 ):
     """
@@ -122,7 +110,8 @@ def crear_tramo(
     existente = db.query(Tramo).filter(
         func.lower(Tramo.origen) == func.lower(tramo.origen),
         func.lower(Tramo.destino) == func.lower(tramo.destino),
-        Tramo.estado == EstadoGeneral.activo
+        Tramo.estado == EstadoGeneral.activo,
+        Tramo.empresa_id == current_user.empresa_id
     ).first()
 
     if existente:
@@ -230,6 +219,7 @@ def actualizar_tramo(
             func.lower(Tramo.origen) == func.lower(nuevo_origen),
             func.lower(Tramo.destino) == func.lower(nuevo_destino),
             Tramo.estado == EstadoGeneral.activo,
+            Tramo.empresa_id == tramo.empresa_id,
             Tramo.id != tramo_id  # Excluir el tramo actual
         ).first()
         
@@ -343,14 +333,6 @@ def listar_peajes_de_tramo(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Tramo no encontrado"
         )
-    
-    # Multi-tenancy: verificar pertenencia a empresa excepto super_admin
-    if current_user.rol and current_user.rol.nombre != "super_admin":
-        if tramo.empresa_id != current_user.empresa_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="No tienes permiso para acceder a este recurso"
-            )
     
     # Obtener peajes del tramo
     tramos_peajes = db.query(TramoPeaje).filter(

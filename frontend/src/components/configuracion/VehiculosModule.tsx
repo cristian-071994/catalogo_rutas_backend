@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import ConfirmDialog from '../ConfirmDialog';
-import { AlertCircle, Plus, Trash2, Loader, Edit2, CheckCircle } from 'lucide-react';
+import { AlertCircle, Plus, Trash2, Loader, Edit2, CheckCircle, Upload, Download } from 'lucide-react';
 
 interface FormDataVehiculo {
   placa: string;
@@ -25,6 +25,12 @@ export default function VehiculosModule() {
     placa: '',
     configuracion_id: 0,
   });
+  const [uploadResult, setUploadResult] = useState<any | null>(null);
+  const [uploadError, setUploadError] = useState('');
+  const [previewData, setPreviewData] = useState<any | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [error, setError] = useState('');
   const queryClient = useQueryClient();
 
@@ -110,6 +116,58 @@ export default function VehiculosModule() {
     },
   });
 
+  const uploadMutation = useMutation({
+    mutationFn: (file: File) => api.uploadVehiculosMasivo(file),
+    onSuccess: (data) => {
+      setUploadResult(data);
+      setUploadError('');
+      setPreviewOpen(false);
+      setPreviewData(null);
+      setSelectedFile(null);
+      queryClient.invalidateQueries({ queryKey: ['vehiculos'] });
+      queryClient.invalidateQueries({ queryKey: ['configuracion-vehiculos'] });
+      queryClient.invalidateQueries({ queryKey: ['marcas'] });
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    },
+    onError: (err: any) => {
+      setUploadResult(null);
+      setUploadError(err.response?.data?.detail || 'Error al cargar el archivo');
+    },
+  });
+
+  const previewMutation = useMutation({
+    mutationFn: (file: File) => api.previewVehiculosMasivo(file),
+    onSuccess: (data) => {
+      setPreviewData(data);
+      setPreviewOpen(true);
+      setUploadError('');
+    },
+    onError: (err: any) => {
+      setPreviewData(null);
+      setPreviewOpen(false);
+      setUploadError(err.response?.data?.detail || 'Error al generar la vista previa');
+    },
+  });
+
+  const handleDownloadTemplate = async () => {
+    try {
+      const blob = await api.downloadVehiculosTemplate();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'plantilla_vehiculos.xlsx';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      setUploadResult(null);
+      setUploadError(err.response?.data?.detail || 'Error al descargar la plantilla');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!formData.placa || !formData.configuracion_id) {
@@ -169,25 +227,206 @@ export default function VehiculosModule() {
   return (
     <div className="space-y-6">
       {canManage && (
-        <button
-          onClick={() => {
-            if (showForm) {
-              handleCancelForm();
-              return;
-            }
-            setShowForm(true);
-          }}
-          className="btn-primary flex items-center gap-2"
-        >
-          <Plus className="w-5 h-5" />
-          Nuevo Vehículo
-        </button>
+        <div className="flex flex-wrap gap-3">
+          <button
+            onClick={() => {
+              if (showForm) {
+                handleCancelForm();
+                return;
+              }
+              setShowForm(true);
+            }}
+            className="btn-primary flex items-center gap-2"
+          >
+            <Plus className="w-5 h-5" />
+            Nuevo Vehículo
+          </button>
+
+          <button
+            type="button"
+            onClick={handleDownloadTemplate}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 text-gray-700 bg-white hover:bg-gray-50"
+          >
+            <Download className="w-5 h-5" />
+            Descargar plantilla
+          </button>
+
+          <label className="flex items-center gap-2 px-4 py-2 rounded-lg border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100 cursor-pointer">
+            <Upload className="w-5 h-5" />
+            Carga masiva (Excel)
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  setSelectedFile(file);
+                  previewMutation.mutate(file);
+                }
+              }}
+            />
+          </label>
+        </div>
       )}
 
       {error && (
         <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
           <AlertCircle className="w-5 h-5 text-red-600" />
           <p className="text-sm text-red-600">{error}</p>
+        </div>
+      )}
+
+      {uploadError && (
+        <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <AlertCircle className="w-5 h-5 text-red-600" />
+          <p className="text-sm text-red-600">{uploadError}</p>
+        </div>
+      )}
+
+      {uploadResult && (
+        <div className="border border-emerald-200 bg-emerald-50 rounded-lg p-4 text-sm text-emerald-900">
+          <p className="font-semibold mb-2">Carga masiva completada</p>
+          <p>Creado: {uploadResult.creados} / Total: {uploadResult.total}</p>
+          {Array.isArray(uploadResult.omitidos) && uploadResult.omitidos.length > 0 && (
+            <div className="mt-2">
+              <p className="font-medium">Omitidos</p>
+              <ul className="list-disc list-inside text-emerald-900">
+                {uploadResult.omitidos.slice(0, 5).map((item: any, idx: number) => (
+                  <li key={`${item.placa}-${idx}`}>
+                    Fila {item.fila}: {item.placa} - {item.mensaje}
+                  </li>
+                ))}
+              </ul>
+              {uploadResult.omitidos.length > 5 && (
+                <p className="text-xs text-emerald-800 mt-1">Se omitieron {uploadResult.omitidos.length} en total.</p>
+              )}
+            </div>
+          )}
+          {Array.isArray(uploadResult.errores) && uploadResult.errores.length > 0 && (
+            <div className="mt-2">
+              <p className="font-medium text-rose-700">Errores</p>
+              <ul className="list-disc list-inside text-rose-700">
+                {uploadResult.errores.slice(0, 5).map((item: any, idx: number) => (
+                  <li key={`err-${idx}`}>Fila {item.fila}: {item.mensaje}</li>
+                ))}
+              </ul>
+              {uploadResult.errores.length > 5 && (
+                <p className="text-xs text-rose-600 mt-1">Hay {uploadResult.errores.length} errores en total.</p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {previewOpen && previewData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full">
+            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Vista previa de carga masiva</h3>
+                <p className="text-sm text-gray-600">Revisa lo que se va a crear u omitir antes de continuar.</p>
+              </div>
+              <button
+                onClick={() => {
+                  setPreviewOpen(false);
+                  setPreviewData(null);
+                  setSelectedFile(null);
+                }}
+                className="px-3 py-1 text-sm text-gray-600 hover:text-gray-900"
+              >
+                Cerrar
+              </button>
+            </div>
+
+            <div className="px-6 py-4 grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
+              <div className="rounded-lg border border-gray-200 p-3">
+                <p className="text-xs text-gray-500">Total</p>
+                <p className="font-semibold text-gray-900">{previewData.total}</p>
+              </div>
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                <p className="text-xs text-emerald-700">Crear</p>
+                <p className="font-semibold text-emerald-900">{previewData.crear}</p>
+              </div>
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                <p className="text-xs text-amber-700">Omitidos</p>
+                <p className="font-semibold text-amber-900">{previewData.omitidos}</p>
+              </div>
+              <div className="rounded-lg border border-rose-200 bg-rose-50 p-3">
+                <p className="text-xs text-rose-700">Errores</p>
+                <p className="font-semibold text-rose-900">{previewData.errores}</p>
+              </div>
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+                <p className="text-xs text-blue-700">Nuevas marcas/config</p>
+                <p className="font-semibold text-blue-900">
+                  {previewData.nuevas_marcas} / {previewData.nuevas_configuraciones}
+                </p>
+              </div>
+            </div>
+
+            <div className="px-6 pb-4 max-h-[360px] overflow-auto">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-white border-b border-gray-200">
+                  <tr>
+                    <th className="text-left px-3 py-2">Fila</th>
+                    <th className="text-left px-3 py-2">Placa</th>
+                    <th className="text-left px-3 py-2">Marca</th>
+                    <th className="text-left px-3 py-2">Modelo</th>
+                    <th className="text-left px-3 py-2">Accion</th>
+                    <th className="text-left px-3 py-2">Detalle</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {previewData.items?.map((item: any, idx: number) => (
+                    <tr key={`${item.fila}-${idx}`} className="border-b border-gray-100">
+                      <td className="px-3 py-2">{item.fila}</td>
+                      <td className="px-3 py-2 font-semibold text-gray-900">{item.placa || '-'}</td>
+                      <td className="px-3 py-2">{item.marca || '-'}</td>
+                      <td className="px-3 py-2">{item.modelo || '-'}</td>
+                      <td className="px-3 py-2">
+                        {item.accion === 'crear' && (
+                          <span className="px-2 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">Crear</span>
+                        )}
+                        {item.accion === 'omitir' && (
+                          <span className="px-2 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">Omitir</span>
+                        )}
+                        {item.accion === 'error' && (
+                          <span className="px-2 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-800">Error</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-gray-600">{item.mensaje}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setPreviewOpen(false);
+                  setPreviewData(null);
+                  setSelectedFile(null);
+                }}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectedFile) {
+                    uploadMutation.mutate(selectedFile);
+                  }
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Confirmar y cargar
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

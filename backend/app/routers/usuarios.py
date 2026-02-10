@@ -11,6 +11,7 @@ from sqlalchemy import func, or_
 from app.database.session import get_db
 from app.models.usuario import Usuario
 from app.models.rol_permiso import Rol
+from app.models.empresa import Empresa
 from app.schemas.auth import (
     UsuarioCreate,
     UsuarioResponse,
@@ -343,10 +344,13 @@ def crear_usuario(
             detail=f"El email '{usuario_data.email}' ya está registrado"
         )
     
-    # Buscar el rol en la BD
-    rol = db.query(Rol).filter(
-        func.lower(Rol.nombre) == func.lower(usuario_data.rol)
-    ).first()
+    # Buscar el rol en la BD (por ID o por nombre)
+    if usuario_data.rol_id:
+        rol = db.query(Rol).filter(Rol.id == usuario_data.rol_id).first()
+    else:
+        rol = db.query(Rol).filter(
+            func.lower(Rol.nombre) == func.lower(usuario_data.rol)
+        ).first()
     
     if not rol:
         raise HTTPException(
@@ -354,19 +358,30 @@ def crear_usuario(
             detail=f"Rol '{usuario_data.rol}' no encontrado"
         )
     
-    # Super admin no puede crear usuarios directamente sin asignar empresa
-    if current_user.empresa_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Super admin debe crear usuarios a través de la creación de empresas"
-        )
-    
-    # Crear el usuario con la empresa del admin actual
+    # Determinar empresa destino
+    es_super_admin = current_user.rol and current_user.rol.nombre == "super_admin"
+    if es_super_admin:
+        if not usuario_data.empresa_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Super admin debe indicar empresa_id para crear usuarios"
+            )
+        empresa_id = usuario_data.empresa_id
+        empresa = db.query(Empresa).filter(Empresa.id == empresa_id).first()
+        if not empresa:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Empresa no encontrada"
+            )
+    else:
+        empresa_id = current_user.empresa_id
+
+    # Crear el usuario con la empresa determinada
     nuevo_usuario = Usuario(
         nombre=usuario_data.nombre,
         email=usuario_data.email,
         password_hash=hash_password(usuario_data.password),
-        empresa_id=current_user.empresa_id,  # Asignar empresa del admin
+        empresa_id=empresa_id,
         rol_id=rol.id,
         activo=1,
         aprobado=1  # Auto-aprobado por admin
@@ -489,6 +504,8 @@ def actualizar_usuario(
         usuario.email = usuario_update.email
     if usuario_update.activo is not None:
         usuario.activo = usuario_update.activo
+    if usuario_update.password:
+        usuario.password_hash = hash_password(usuario_update.password)
     
     db.add(usuario)
     db.commit()

@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../services/api';
 import { AlertCircle, Plus, Loader, X } from 'lucide-react';
 import { formatKm } from '../../utils/format';
+import { useAuth } from '../../context/AuthContext';
 
 interface FormDataRuta {
   nombre: string;
@@ -11,6 +12,8 @@ interface FormDataRuta {
 }
 
 export default function RutasModule() {
+  const { usuario } = useAuth();
+  const canManageRutas = usuario?.rol?.nombre === 'admin' || usuario?.rol?.nombre === 'super_admin';
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState<FormDataRuta>({
     nombre: '',
@@ -111,14 +114,16 @@ export default function RutasModule() {
 
   return (
     <div className="space-y-6">
-      <button
-        onClick={() => setShowForm(!showForm)}
-        className="btn-primary flex items-center gap-2"
-        title="Crear ruta"
-      >
-        <Plus className="w-5 h-5" />
-        Nueva Ruta
-      </button>
+      {canManageRutas && (
+        <button
+          onClick={() => setShowForm(!showForm)}
+          className="btn-primary flex items-center gap-2"
+          title="Crear ruta"
+        >
+          <Plus className="w-5 h-5" />
+          Nueva Ruta
+        </button>
+      )}
 
       {error && (
         <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
@@ -127,7 +132,7 @@ export default function RutasModule() {
         </div>
       )}
 
-      {showForm && (
+      {showForm && canManageRutas && (
         <div className="border border-neutral-200 rounded-lg p-6 bg-neutral-50">
           <h3 className="font-semibold text-neutral-900 mb-4">Crear Nueva Ruta</h3>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -220,17 +225,19 @@ export default function RutasModule() {
                       )}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <button
-                        type="button"
-                        onClick={() => handleAddTramo(ruta.id)}
-                        className="text-sm text-blue-600 hover:text-blue-700"
-                        title="Agregar tramo a la ruta"
-                      >
-                        Agregar tramo a ruta
-                      </button>
+                      {canManageRutas && (
+                        <button
+                          type="button"
+                          onClick={() => handleAddTramo(ruta.id)}
+                          className="text-sm text-blue-600 hover:text-blue-700"
+                          title="Agregar tramo a la ruta"
+                        >
+                          Agregar tramo a ruta
+                        </button>
+                      )}
                     </td>
                   </tr>
-                  {activeRutaId === ruta.id && (
+                  {canManageRutas && activeRutaId === ruta.id && (
                     <tr className="bg-neutral-50">
                       <td colSpan={5} className="px-4 py-4">
                         <div className="grid gap-3 sm:grid-cols-4 items-center">

@@ -16,7 +16,7 @@ from app.models.usuario import Usuario
 from app.models.enums import DireccionPeaje, EstadoGeneral
 from app.schemas.ruta import RutaCreate, RutaResponse, RutaUpdate
 from app.services.ruta_service import calcular_costo_ruta_detallado
-from app.auth import get_current_user, require_permission
+from app.auth import get_current_user, require_permission, require_role
 
 
 router = APIRouter(prefix="/rutas", tags=["Rutas"])
@@ -30,7 +30,7 @@ router = APIRouter(prefix="/rutas", tags=["Rutas"])
 )
 def crear_ruta(
     ruta: RutaCreate,
-    current_user: Usuario = Depends(require_permission("crear_ruta")),
+    current_user: Usuario = Depends(require_role("admin", "super_admin")),
     db: Session = Depends(get_db)
 ):
     # 1. Validar que el cliente exista
@@ -89,7 +89,7 @@ def listar_rutas(
     # Multi-tenancy: filtrar por empresa excepto super_admin
     if current_user.rol and current_user.rol.nombre != "super_admin":
         query = query.filter(Ruta.empresa_id == current_user.empresa_id)
-    
+
     if not incluir_inactivos:
         query = query.filter(Ruta.estado == EstadoGeneral.activo)
     
@@ -112,14 +112,6 @@ def obtener_ruta(
             detail="Ruta no encontrada"
         )
 
-    # Multi-tenancy: verificar pertenencia a empresa excepto super_admin
-    if current_user.rol and current_user.rol.nombre != "super_admin":
-        if ruta.empresa_id != current_user.empresa_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="No tienes permiso para acceder a este recurso"
-            )
-
     return ruta
 
 
@@ -132,7 +124,7 @@ def agregar_tramo_a_ruta(
     ruta_id: int,
     tramo_id: int,
     orden: int,
-    current_user: Usuario = Depends(require_permission("editar_ruta")),
+    current_user: Usuario = Depends(require_role("admin", "super_admin")),
     db: Session = Depends(get_db)
 ):
     """
@@ -409,7 +401,7 @@ def listar_rutas_por_cliente(
     # Multi-tenancy: filtrar por empresa excepto super_admin
     if current_user.rol and current_user.rol.nombre != "super_admin":
         query = query.filter(Ruta.empresa_id == current_user.empresa_id)
-    
+
     if not incluir_inactivos:
         query = query.filter(Ruta.estado == EstadoGeneral.activo)
     

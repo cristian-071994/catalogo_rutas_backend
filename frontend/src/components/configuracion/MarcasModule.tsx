@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
@@ -22,6 +22,10 @@ export default function MarcasModule() {
     queryKey: ['marcas'],
     queryFn: () => api.getMarcas(),
   });
+
+  const marcasOrdenadas = useMemo(() => {
+    return [...marcas].sort((a: any, b: any) => (a.nombre || '').localeCompare(b.nombre || ''));
+  }, [marcas]);
 
   const createMutation = useMutation({
     mutationFn: (data: FormDataMarca) => api.createMarca(data),
@@ -107,7 +111,7 @@ export default function MarcasModule() {
             </tr>
           </thead>
           <tbody>
-            {marcas.map((marca: any) => (
+            {marcasOrdenadas.map((marca: any) => (
               <tr key={marca.id} className="border-b border-neutral-100 hover:bg-neutral-50">
                 <td className="px-4 py-3 text-sm text-neutral-900">{marca.nombre}</td>
                 {isSuperAdmin && (
@@ -123,7 +127,7 @@ export default function MarcasModule() {
         </table>
       </div>
 
-      {marcas.length === 0 && (
+      {marcasOrdenadas.length === 0 && (
         <div className="text-center py-8 text-neutral-600">
           <p>No hay marcas registradas. Crea una nueva para comenzar.</p>
         </div>

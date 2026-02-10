@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
@@ -29,6 +29,28 @@ export default function ConfiguracionVehicleModule() {
     queryKey: ['marcas'],
     queryFn: () => api.getMarcas(),
   });
+
+  const marcasOrdenadas = useMemo(() => {
+    return [...marcas].sort((a: any, b: any) => (a.nombre || '').localeCompare(b.nombre || ''));
+  }, [marcas]);
+
+  const marcaMap = useMemo(() => {
+    return new Map(marcas.map((marca: any) => [marca.id, marca.nombre || '']));
+  }, [marcas]);
+
+  const configsOrdenadas = useMemo(() => {
+    return [...configs].sort((a: any, b: any) => {
+      const marcaA = marcaMap.get(a.marca_id) || '';
+      const marcaB = marcaMap.get(b.marca_id) || '';
+      const cmpMarca = marcaA.localeCompare(marcaB);
+      if (cmpMarca !== 0) {
+        return cmpMarca;
+      }
+      const modeloA = Number(a.modelo) || 0;
+      const modeloB = Number(b.modelo) || 0;
+      return modeloB - modeloA;
+    });
+  }, [configs, marcaMap]);
 
   const createMutation = useMutation({
     mutationFn: (data: FormDataConfigVehiculo) => api.createConfiguracionVehiculo(data),
@@ -90,7 +112,7 @@ export default function ConfiguracionVehicleModule() {
                 required
               >
                 <option value="">Selecciona una marca</option>
-                {marcas.map((marca: any) => (
+                {marcasOrdenadas.map((marca: any) => (
                   <option key={marca.id} value={marca.id}>
                     {marca.nombre}
                   </option>
@@ -140,11 +162,11 @@ export default function ConfiguracionVehicleModule() {
             </tr>
           </thead>
           <tbody>
-            {configs.map((config: any) => {
-              const marca = marcas.find((m: any) => m.id === config.marca_id);
+            {configsOrdenadas.map((config: any) => {
+              const marcaNombre = marcaMap.get(config.marca_id) || 'Desconocida';
               return (
                 <tr key={config.id} className="border-b border-neutral-100 hover:bg-neutral-50">
-                  <td className="px-4 py-3 text-sm text-neutral-900">{marca?.nombre || 'Desconocida'}</td>
+                  <td className="px-4 py-3 text-sm text-neutral-900">{marcaNombre}</td>
                   <td className="px-4 py-3 text-sm text-neutral-600">{config.modelo}</td>
                   <td className="px-4 py-3 text-sm">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${

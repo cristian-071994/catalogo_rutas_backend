@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../services/api';
 import { formatCOP, formatKm } from '../utils/format';
@@ -9,6 +9,21 @@ export default function ResumenRutasPage() {
   const [selectedCliente, setSelectedCliente] = useState<number | null>(null);
   const [selectedVehiculo, setSelectedVehiculo] = useState<number | null>(null);
   const [selectedRuta, setSelectedRuta] = useState<number | null>(null);
+  const [clienteSearch, setClienteSearch] = useState('');
+  const [vehiculoSearch, setVehiculoSearch] = useState('');
+  const [rutaSearch, setRutaSearch] = useState('');
+  const [clienteOpen, setClienteOpen] = useState(false);
+  const [vehiculoOpen, setVehiculoOpen] = useState(false);
+  const [rutaOpen, setRutaOpen] = useState(false);
+  const clienteButtonRef = useRef<HTMLButtonElement | null>(null);
+  const vehiculoButtonRef = useRef<HTMLButtonElement | null>(null);
+  const rutaButtonRef = useRef<HTMLButtonElement | null>(null);
+  const [clienteDropdownStyle, setClienteDropdownStyle] = useState<Record<string, number>>({});
+  const [vehiculoDropdownStyle, setVehiculoDropdownStyle] = useState<Record<string, number>>({});
+  const [rutaDropdownStyle, setRutaDropdownStyle] = useState<Record<string, number>>({});
+  const [clienteListHeight, setClienteListHeight] = useState(320);
+  const [vehiculoListHeight, setVehiculoListHeight] = useState(320);
+  const [rutaListHeight, setRutaListHeight] = useState(320);
   const [precioGalon, setPrecioGalon] = useState<number | ''>('');
   const [resumen, setResumen] = useState<ResumenRutaDetallado | null>(null);
   const [error, setError] = useState('');
@@ -40,15 +55,148 @@ export default function ResumenRutasPage() {
 
   const rutasDelCliente = rutas?.filter((r: Ruta) => r.cliente_id === selectedCliente) || [];
 
+  const clientesFiltrados = useMemo(() => {
+    const term = clienteSearch.trim().toLowerCase();
+    if (!term) {
+      return clientes;
+    }
+    return clientes.filter((c: Cliente) => c.nombre?.toLowerCase().includes(term));
+  }, [clientes, clienteSearch]);
+
+  const vehiculosFiltrados = useMemo(() => {
+    const term = vehiculoSearch.trim().toLowerCase();
+    if (!term) {
+      return vehiculos;
+    }
+    return vehiculos.filter((v: Vehiculo) => v.placa?.toLowerCase().includes(term));
+  }, [vehiculos, vehiculoSearch]);
+
+  const rutasFiltradas = useMemo(() => {
+    const term = rutaSearch.trim().toLowerCase();
+    if (!term) {
+      return rutasDelCliente;
+    }
+    return rutasDelCliente.filter((r: Ruta) => {
+      const nombre = (r.nombre || '').toLowerCase();
+      const origenDestino = `${r.origen || ''} ${r.destino || ''}`.trim().toLowerCase();
+      return nombre.includes(term) || origenDestino.includes(term);
+    });
+  }, [rutasDelCliente, rutaSearch]);
+
   const rutasOrdenadas = useMemo(() => {
     return [...rutasDelCliente].sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
   }, [rutasDelCliente]);
+
+  const clienteSeleccionado = useMemo(() => {
+    return clientes.find((c: Cliente) => c.id === selectedCliente) || null;
+  }, [clientes, selectedCliente]);
+
+  const vehiculoSeleccionado = useMemo(() => {
+    return vehiculos.find((v: Vehiculo) => v.id === selectedVehiculo) || null;
+  }, [vehiculos, selectedVehiculo]);
+
+  const rutaSeleccionada = useMemo(() => {
+    return rutasDelCliente.find((r: Ruta) => r.id === selectedRuta) || null;
+  }, [rutasDelCliente, selectedRuta]);
 
   const getTiposCarga = (tramo: ResumenTramoDetalle) => {
     const cargas = new Set(tramo.detalles.map((detalle) => detalle.tipo_carga));
     const orden = ['VACIO', 'CARGADO'];
     return Array.from(cargas).sort((a, b) => orden.indexOf(a) - orden.indexOf(b));
   };
+
+  const getDropdownMaxHeight = useCallback(
+    (rect: DOMRect) => {
+      const available = window.innerHeight - rect.bottom - 16;
+      const base = Math.max(220, available);
+      if (resumen) {
+        return Math.min(base, 360);
+      }
+      return base;
+    },
+    [resumen]
+  );
+
+  const updateClienteDropdown = useCallback(() => {
+    if (!clienteButtonRef.current) {
+      return;
+    }
+    const rect = clienteButtonRef.current.getBoundingClientRect();
+    setClienteDropdownStyle({
+      top: rect.bottom + 8,
+      left: rect.left,
+      width: rect.width,
+    });
+    setClienteListHeight(getDropdownMaxHeight(rect));
+  }, [getDropdownMaxHeight]);
+
+  const updateVehiculoDropdown = useCallback(() => {
+    if (!vehiculoButtonRef.current) {
+      return;
+    }
+    const rect = vehiculoButtonRef.current.getBoundingClientRect();
+    setVehiculoDropdownStyle({
+      top: rect.bottom + 8,
+      left: rect.left,
+      width: rect.width,
+    });
+    setVehiculoListHeight(getDropdownMaxHeight(rect));
+  }, [getDropdownMaxHeight]);
+
+  const updateRutaDropdown = useCallback(() => {
+    if (!rutaButtonRef.current) {
+      return;
+    }
+    const rect = rutaButtonRef.current.getBoundingClientRect();
+    setRutaDropdownStyle({
+      top: rect.bottom + 8,
+      left: rect.left,
+      width: rect.width,
+    });
+    setRutaListHeight(getDropdownMaxHeight(rect));
+  }, [getDropdownMaxHeight]);
+
+  useEffect(() => {
+    if (!clienteOpen) {
+      return;
+    }
+    updateClienteDropdown();
+    const handler = () => updateClienteDropdown();
+    window.addEventListener('resize', handler);
+    window.addEventListener('scroll', handler, true);
+    return () => {
+      window.removeEventListener('resize', handler);
+      window.removeEventListener('scroll', handler, true);
+    };
+  }, [clienteOpen, updateClienteDropdown]);
+
+  useEffect(() => {
+    if (!vehiculoOpen) {
+      return;
+    }
+    updateVehiculoDropdown();
+    const handler = () => updateVehiculoDropdown();
+    window.addEventListener('resize', handler);
+    window.addEventListener('scroll', handler, true);
+    return () => {
+      window.removeEventListener('resize', handler);
+      window.removeEventListener('scroll', handler, true);
+    };
+  }, [vehiculoOpen, updateVehiculoDropdown]);
+
+  useEffect(() => {
+    if (!rutaOpen) {
+      return;
+    }
+    updateRutaDropdown();
+    const handler = () => updateRutaDropdown();
+    window.addEventListener('resize', handler);
+    window.addEventListener('scroll', handler, true);
+    return () => {
+      window.removeEventListener('resize', handler);
+      window.removeEventListener('scroll', handler, true);
+    };
+  }, [rutaOpen, updateRutaDropdown]);
 
   const handleCalcularResumen = async () => {
     if (!selectedRuta || !selectedVehiculo) {
@@ -91,60 +239,219 @@ export default function ResumenRutasPage() {
       )}
 
       {/* Selectores */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="relative z-40 grid grid-cols-1 md:grid-cols-4 gap-4 overflow-visible">
         {/* Cliente */}
-        <div className="card">
+        <div
+          className="card relative overflow-visible"
+          tabIndex={0}
+          onBlur={(e) => {
+            if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+              setClienteOpen(false);
+            }
+          }}
+        >
           <label className="label-base">Cliente</label>
-          <select
-            value={selectedCliente || ''}
-            onChange={(e) => {
-              setSelectedCliente(e.target.value ? Number(e.target.value) : null);
-              setSelectedRuta(null);
+          <button
+            type="button"
+            className="input-base flex items-center justify-between bg-white text-neutral-900"
+            onClick={() => {
+              setVehiculoOpen(false);
+              setRutaOpen(false);
+              if (!clienteOpen) {
+                updateClienteDropdown();
+              }
+              setClienteOpen((prev) => !prev);
             }}
-            className="input-base"
+            ref={clienteButtonRef}
           >
-            <option value="">-- Selecciona un cliente --</option>
-            {clientes?.map((c: Cliente) => (
-              <option key={c.id} value={c.id}>
-                {c.nombre}
-              </option>
-            ))}
-          </select>
+            <span className={clienteSeleccionado ? 'text-neutral-900' : 'text-neutral-400'}>
+              {clienteSeleccionado?.nombre || '-- Selecciona un cliente --'}
+            </span>
+            <span className="text-neutral-400">▾</span>
+          </button>
+          {clienteOpen && (
+            <div
+              className="fixed z-50 rounded-lg border border-neutral-200 bg-white shadow-lg"
+              style={clienteDropdownStyle}
+            >
+              <div className="p-2">
+                <input
+                  type="text"
+                  placeholder="Buscar cliente..."
+                  className="input-base bg-white text-neutral-900"
+                  value={clienteSearch}
+                  onChange={(e) => setClienteSearch(e.target.value)}
+                  autoFocus
+                />
+              </div>
+              <div className="dropdown-list bg-white" style={{ maxHeight: clienteListHeight }}>
+                {clientesFiltrados.length === 0 ? (
+                  <div className="px-3 py-2 text-sm text-neutral-500">Sin resultados</div>
+                ) : (
+                  clientesFiltrados.map((c: Cliente) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedCliente(c.id);
+                        setSelectedRuta(null);
+                        setRutaSearch('');
+                        setClienteSearch('');
+                        setClienteOpen(false);
+                      }}
+                      className="dropdown-option w-full px-3 py-2 text-left text-sm"
+                    >
+                      {c.nombre}
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Vehículo */}
-        <div className="card">
+        <div
+          className="card relative overflow-visible"
+          tabIndex={0}
+          onBlur={(e) => {
+            if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+              setVehiculoOpen(false);
+            }
+          }}
+        >
           <label className="label-base">Vehículo</label>
-          <select
-            value={selectedVehiculo || ''}
-            onChange={(e) => setSelectedVehiculo(e.target.value ? Number(e.target.value) : null)}
-            className="input-base"
+          <button
+            type="button"
+            className="input-base flex items-center justify-between bg-white text-neutral-900"
+            onClick={() => {
+              setClienteOpen(false);
+              setRutaOpen(false);
+              if (!vehiculoOpen) {
+                updateVehiculoDropdown();
+              }
+              setVehiculoOpen((prev) => !prev);
+            }}
+            ref={vehiculoButtonRef}
           >
-            <option value="">-- Selecciona un vehículo --</option>
-            {vehiculos?.map((v: Vehiculo) => (
-              <option key={v.id} value={v.id}>
-                {v.placa}
-              </option>
-            ))}
-          </select>
+            <span className={vehiculoSeleccionado ? 'text-neutral-900' : 'text-neutral-400'}>
+              {vehiculoSeleccionado?.placa || '-- Selecciona un vehículo --'}
+            </span>
+            <span className="text-neutral-400">▾</span>
+          </button>
+          {vehiculoOpen && (
+            <div
+              className="fixed z-50 rounded-lg border border-neutral-200 bg-white shadow-lg"
+              style={vehiculoDropdownStyle}
+            >
+              <div className="p-2">
+                <input
+                  type="text"
+                  placeholder="Buscar vehículo..."
+                  className="input-base bg-white text-neutral-900"
+                  value={vehiculoSearch}
+                  onChange={(e) => setVehiculoSearch(e.target.value)}
+                  autoFocus
+                />
+              </div>
+              <div className="dropdown-list bg-white" style={{ maxHeight: vehiculoListHeight }}>
+                {vehiculosFiltrados.length === 0 ? (
+                  <div className="px-3 py-2 text-sm text-neutral-500">Sin resultados</div>
+                ) : (
+                  vehiculosFiltrados.map((v: Vehiculo) => (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedVehiculo(v.id);
+                        setVehiculoSearch('');
+                        setVehiculoOpen(false);
+                      }}
+                      className="dropdown-option w-full px-3 py-2 text-left text-sm"
+                    >
+                      {v.placa}
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Ruta */}
-        <div className="card">
+        <div
+          className="card relative overflow-visible"
+          tabIndex={0}
+          onBlur={(e) => {
+            if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+              setRutaOpen(false);
+            }
+          }}
+        >
           <label className="label-base">Ruta</label>
-          <select
-            value={selectedRuta || ''}
-            onChange={(e) => setSelectedRuta(e.target.value ? Number(e.target.value) : null)}
+          <button
+            type="button"
+            className="input-base flex items-center justify-between bg-white text-neutral-900 disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => {
+              if (!selectedCliente) {
+                return;
+              }
+              setClienteOpen(false);
+              setVehiculoOpen(false);
+              if (!rutaOpen) {
+                updateRutaDropdown();
+              }
+              setRutaOpen((prev) => !prev);
+            }}
             disabled={!selectedCliente}
-            className="input-base disabled:opacity-50 disabled:cursor-not-allowed"
+            ref={rutaButtonRef}
           >
-            <option value="">-- Selecciona una ruta --</option>
-            {rutasOrdenadas.map((r: Ruta) => (
-              <option key={r.id} value={r.id}>
-                  {r.nombre || `${r.origen || ''} → ${r.destino || ''}`.trim()}
-              </option>
-            ))}
-          </select>
+            <span className={rutaSeleccionada ? 'text-neutral-900' : 'text-neutral-400'}>
+              {rutaSeleccionada
+                ? rutaSeleccionada.nombre || `${rutaSeleccionada.origen || ''} → ${rutaSeleccionada.destino || ''}`.trim()
+                : '-- Selecciona una ruta --'}
+            </span>
+            <span className="text-neutral-400">▾</span>
+          </button>
+          {selectedCliente && rutaOpen && (
+            <div
+              className="fixed z-50 rounded-lg border border-neutral-200 bg-white shadow-lg"
+              style={rutaDropdownStyle}
+            >
+              <div className="p-2">
+                <input
+                  type="text"
+                  placeholder="Buscar ruta..."
+                  className="input-base bg-white text-neutral-900"
+                  value={rutaSearch}
+                  onChange={(e) => setRutaSearch(e.target.value)}
+                  autoFocus
+                />
+              </div>
+              <div className="dropdown-list bg-white" style={{ maxHeight: rutaListHeight }}>
+                {rutasFiltradas.length === 0 ? (
+                  <div className="px-3 py-2 text-sm text-neutral-500">Sin resultados</div>
+                ) : (
+                  rutasOrdenadas
+                    .filter((r: Ruta) => rutasFiltradas.some((rf: Ruta) => rf.id === r.id))
+                    .map((r: Ruta) => (
+                      <button
+                        key={r.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedRuta(r.id);
+                          setRutaSearch('');
+                          setRutaOpen(false);
+                        }}
+                        className="dropdown-option w-full px-3 py-2 text-left text-sm"
+                      >
+                        {r.nombre || `${r.origen || ''} → ${r.destino || ''}`.trim()}
+                      </button>
+                    ))
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Precio Galon */}

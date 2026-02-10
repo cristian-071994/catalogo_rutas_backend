@@ -115,6 +115,8 @@ class UsuarioCreate(BaseModel):
     email: EmailStr = Field(..., description="Email único del usuario")
     password: str = Field(..., min_length=6, max_length=100, description="Contraseña (mín. 6 caracteres)")
     rol: str = Field(default="consultor", description="Rol del usuario (admin, supervisor, gestor_rutas, gestor_peajes, gestor_clientes, consultor)")
+    rol_id: Optional[int] = Field(None, description="ID del rol (alternativo al nombre)")
+    empresa_id: Optional[int] = Field(None, description="ID de la empresa (requerido para super_admin)")
 
     class Config:
         from_attributes = True
@@ -126,6 +128,7 @@ class UsuarioUpdate(BaseModel):
     email: Optional[EmailStr] = Field(None)
     rol: Optional[str] = Field(None)
     activo: Optional[int] = Field(None, ge=0, le=1)
+    password: Optional[str] = Field(None, min_length=6, max_length=100)
 
     class Config:
         from_attributes = True

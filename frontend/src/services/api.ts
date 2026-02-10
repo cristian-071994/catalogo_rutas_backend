@@ -167,6 +167,35 @@ class ApiClient {
     return response.data;
   }
 
+  async uploadVehiculosMasivo(file: File) {
+    const formData = new FormData();
+    formData.append('archivo', file);
+    const response = await this.client.post('/vehiculos/carga-masiva', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  }
+
+  async previewVehiculosMasivo(file: File) {
+    const formData = new FormData();
+    formData.append('archivo', file);
+    const response = await this.client.post('/vehiculos/carga-masiva/preview', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  }
+
+  async downloadVehiculosTemplate() {
+    const response = await this.client.get('/vehiculos/carga-masiva/template', {
+      responseType: 'blob',
+    });
+    return response.data as Blob;
+  }
+
   // Rutas
   async getRutas() {
     const response = await this.client.get('/rutas/');
