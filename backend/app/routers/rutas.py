@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from decimal import Decimal
 from pydantic import BaseModel
 
@@ -223,9 +224,15 @@ def obtener_resumen_ruta(
     # Si no envían precio_galon, obtenerlo de la BD
     if not precio_galon:
         from app.models.configuracion import ConfiguracionGeneral
-        config = db.query(ConfiguracionGeneral).filter(
-            ConfiguracionGeneral.clave == "precio_galon"
-        ).first()
+        query = db.query(ConfiguracionGeneral).filter(
+            func.lower(ConfiguracionGeneral.clave) == "precio_galon"
+        )
+
+        # Multi-tenancy: filtrar por empresa excepto super_admin
+        if current_user.rol and current_user.rol.nombre != "super_admin":
+            query = query.filter(ConfiguracionGeneral.empresa_id == current_user.empresa_id)
+
+        config = query.first()
         
         if not config:
             raise HTTPException(

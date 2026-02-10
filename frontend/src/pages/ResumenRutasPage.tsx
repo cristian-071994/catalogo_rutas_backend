@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import api from '../services/api';
 import { formatCOP, formatKm } from '../utils/format';
 import type { Cliente, Vehiculo, Ruta, ResumenRutaDetallado, ResumenTramoDetalle } from '../types/index';
-import { AlertCircle, Loader, Route, Truck } from 'lucide-react';
+import { AlertCircle, Loader, Package, Route, Truck } from 'lucide-react';
 
 export default function ResumenRutasPage() {
   const [selectedCliente, setSelectedCliente] = useState<number | null>(null);
@@ -43,6 +43,12 @@ export default function ResumenRutasPage() {
   const rutasOrdenadas = useMemo(() => {
     return [...rutasDelCliente].sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
   }, [rutasDelCliente]);
+
+  const getTiposCarga = (tramo: ResumenTramoDetalle) => {
+    const cargas = new Set(tramo.detalles.map((detalle) => detalle.tipo_carga));
+    const orden = ['VACIO', 'CARGADO'];
+    return Array.from(cargas).sort((a, b) => orden.indexOf(a) - orden.indexOf(b));
+  };
 
   const handleCalcularResumen = async () => {
     if (!selectedRuta || !selectedVehiculo) {
@@ -282,6 +288,33 @@ export default function ResumenRutasPage() {
                       </div>
                     ))}
                   </div>
+                </div>
+
+                <div className="mt-3 flex">
+                  {resumen.tramos_detalle.map((tramo: ResumenTramoDetalle) => (
+                    <div
+                      key={`carga-${tramo.tramo_id}`}
+                      className="flex justify-center"
+                      style={{ flex: `${Math.max(tramo.km_totales, 1)} 1 0%` }}
+                    >
+                      <div className="flex flex-wrap items-center justify-center gap-2">
+                        {getTiposCarga(tramo).map((tipo) => {
+                          const isCargado = tipo === 'CARGADO';
+                          const Icon = isCargado ? Package : Truck;
+                          const label = isCargado ? 'Cargado' : 'Vacio';
+                          return (
+                            <span
+                              key={`${tramo.tramo_id}-${tipo}`}
+                              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs md:text-sm font-semibold tracking-wide bg-blue-50 text-blue-700 border border-blue-200 shadow-sm"
+                            >
+                              <Icon className="w-4 h-4" />
+                              {label}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
