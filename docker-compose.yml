@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres:15
+    container_name: catalogo_db
+    environment:
+      POSTGRES_DB: catalogo
+      POSTGRES_USER: catalogo_user
+      POSTGRES_PASSWORD: catalogo_pass
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: catalogo_backend
+    environment:
+      DATABASE_URL: postgresql+psycopg2://catalogo_user:catalogo_pass@db:5432/catalogo
+      SECRET_KEY: change-me-prod
+      ENVIRONMENT: production
+      CORS_ORIGINS: http://localhost
+    depends_on:
+      - db
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: catalogo_frontend
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+
+volumes:
+  pgdata:

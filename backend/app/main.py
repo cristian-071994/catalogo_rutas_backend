@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -56,9 +57,12 @@ todos los días a las 3:00 AM (hora de Colombia).
 )
 
 # Configurar CORS para permitir peticiones desde el frontend
+cors_origins_env = os.getenv("CORS_ORIGINS", "http://localhost:5173")
+allow_origins = [origin.strip() for origin in cors_origins_env.split(",") if origin.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # Frontend en desarrollo
+    allow_origins=allow_origins,  # Frontend permitido por entorno
     allow_credentials=True,
     allow_methods=["*"],  # Permitir todos los métodos (GET, POST, PUT, DELETE, etc.)
     allow_headers=["*"],  # Permitir todos los headers
@@ -72,7 +76,6 @@ def startup_event():
     # Las empresas se crean vía super admin
     
     # Solo en desarrollo: crear datos de prueba
-    import os
     if os.getenv("ENVIRONMENT", "development") == "development":
         db = next(get_db())
         create_test_users(db)

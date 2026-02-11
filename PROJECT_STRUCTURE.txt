@@ -1,0 +1,190 @@
+﻿catalogo_rutas_backend
++---backend
+|   +---app
+|   |   +---database
+|   |   |   +---base.py
+|   |   |   +---db.py
+|   |   |   +---init_db.py
+|   |   |   \\---session.py
+|   |   +---models
+|   |   |   +---__init__.py
+|   |   |   +---cliente.py
+|   |   |   +---configuracion.py
+|   |   |   +---configuracion_vehiculo.py
+|   |   |   +---empresa.py
+|   |   |   +---enums.py
+|   |   |   +---marca_vehiculo.py
+|   |   |   +---peaje.py
+|   |   |   +---rendimiento_configuracion.py
+|   |   |   +---rol.py
+|   |   |   +---rol_permiso.py
+|   |   |   +---ruta.py
+|   |   |   +---ruta_peaje.py
+|   |   |   +---tramo.py
+|   |   |   +---tramo_detalle.py
+|   |   |   +---tramo_peaje.py
+|   |   |   +---tramo_ruta.py
+|   |   |   +---usuario.py
+|   |   |   \\---vehiculo.py
+|   |   +---routers
+|   |   |   +---__init__.py
+|   |   |   +---auth.py
+|   |   |   +---clientes.py
+|   |   |   +---configuracion.py
+|   |   |   +---configuracion_vehiculos.py
+|   |   |   +---empresas.py
+|   |   |   +---marcas_vehiculos.py
+|   |   |   +---peajes.py
+|   |   |   +---permisos.py
+|   |   |   +---rendimiento_configuracion.py
+|   |   |   +---roles.py
+|   |   |   +---rutas.py
+|   |   |   +---tramo_detalle.py
+|   |   |   +---tramos.py
+|   |   |   +---usuarios.py
+|   |   |   \\---vehiculos.py
+|   |   +---schemas
+|   |   |   +---auth.py
+|   |   |   +---cliente.py
+|   |   |   +---configuracion.py
+|   |   |   +---configuracion_vehiculo.py
+|   |   |   +---empresa.py
+|   |   |   +---marca_vehiculo.py
+|   |   |   +---peaje.py
+|   |   |   +---rendimiento_configuracion.py
+|   |   |   +---rol_permiso.py
+|   |   |   +---ruta.py
+|   |   |   +---ruta_peaje.py
+|   |   |   +---tramo.py
+|   |   |   +---tramo_detalle.py
+|   |   |   +---tramo_ruta.py
+|   |   |   \\---vehiculo.py
+|   |   +---services
+|   |   |   +---peaje_sync_service.py
+|   |   |   +---ruta_service.py
+|   |   |   \\---tramo_service.py
+|   |   +---__init__.py
+|   |   +---auth.py
+|   |   +---config.py
+|   |   +---main.py
+|   |   \\---scheduler.py
+|   +---scripts
+|   |   +---agregar_permisos_recursos.py
+|   |   +---agregar_permisos_tramos.py
+|   |   +---auditoria_permisos.py
+|   |   +---migrar_peajes.py
+|   |   +---migrar_peajes_ani.py
+|   |   +---migrar_permisos_completo.py
+|   |   +---test_clientes_quick.py
+|   |   \\---verificar_seguridad.py
+|   +---.env
+|   +---.env.example
+|   +---AUTENTICACION_Y_ROLES.md
+|   +---catalogo_rutas.db
+|   +---CHANGELOG_SOFT_DELETE.md
+|   +---check_indices.py
+|   +---check_peaje.py
+|   +---COMO_PROBAR_AUTH.md
+|   +---Dockerfile
+|   +---ENDPOINTS_TRAMOS.md
+|   +---GUIA_ONBOARDING.md
+|   +---MIGRACION_MULTI_TENANCY.md
+|   +---PLAN_REFACTORIZACION_PEAJES.md
+|   +---READINESS_REVIEW.md
+|   +---README.md
+|   +---REFACTORIZACION_PEAJES_COMPLETADA.md
+|   +---REORGANIZACION_PERMISOS.md
+|   +---requirements.txt
+|   +---RESUMEN_IMPLEMENTACION.md
+|   +---RESUMEN_VISUAL_FINAL.md
+|   +---REVISION_PROYECTO.md
+|   +---SEGURIDAD_IMPLEMENTADA.md
+|   +---SOFT_DELETE_EXAMPLES.md
+|   +---SOFT_DELETE_FAQ.md
+|   +---SOFT_DELETE_PATTERN.md
+|   +---SOFT_DELETE_RESUMEN.md
+|   +---test_all_endpoints.py
+|   +---test_autenticacion.py
+|   +---test_auth_simple.py
+|   +---test_fase2_roles_permisos.py
+|   +---test_login_rapido.py
+|   +---test_migration.py
+|   +---test_migration_api.py
+|   +---test_roles_permisos.py
+|   \\---TESTING_GUIDE.md
++---frontend
+|   +---public
+|   |   +---favicon.svg
+|   |   \\---vite.svg
+|   +---src
+|   |   +---assets
+|   |   |   \\---react.svg
+|   |   +---components
+|   |   |   +---admin
+|   |   |   |   +---EmpresasModule.tsx
+|   |   |   |   +---PermisosModule.tsx
+|   |   |   |   +---RolesModule.tsx
+|   |   |   |   +---UsuariosModule.tsx
+|   |   |   |   \\---UsuariosPendientesModule.tsx
+|   |   |   +---configuracion
+|   |   |   |   +---ClientesModule.tsx
+|   |   |   |   +---ConfiguracionVehicleModule.tsx
+|   |   |   |   +---MarcasModule.tsx
+|   |   |   |   +---PeajesModule.tsx
+|   |   |   |   +---PrecioCombustibleModule.tsx
+|   |   |   |   +---RendimientoModule.tsx
+|   |   |   |   +---RutasModule.tsx
+|   |   |   |   +---TramosModule.tsx
+|   |   |   |   \\---VehiculosModule.tsx
+|   |   |   +---ConfirmDialog.tsx
+|   |   |   \\---PasswordInput.tsx
+|   |   +---context
+|   |   |   \\---AuthContext.tsx
+|   |   +---hooks
+|   |   +---pages
+|   |   |   +---AdminPage.tsx
+|   |   |   +---ConfiguracionPage.tsx
+|   |   |   +---DashboardLayout.tsx
+|   |   |   +---GuiaPage.tsx
+|   |   |   +---LoginPage.tsx
+|   |   |   +---RegisterPage.tsx
+|   |   |   \\---ResumenRutasPage.tsx
+|   |   +---services
+|   |   |   +---api.ts
+|   |   |   \\---axiosInstance.ts
+|   |   +---types
+|   |   |   \\---index.ts
+|   |   +---utils
+|   |   |   +---authStorage.ts
+|   |   |   +---format.ts
+|   |   |   \\---permissions.ts
+|   |   +---App.tsx
+|   |   +---index.css
+|   |   +---main.tsx
+|   |   \\---ProtectedRoute.tsx
+|   +---.gitignore
+|   +---Dockerfile
+|   +---eslint.config.js
+|   +---index.html
+|   +---MEJORAS_FRONTEND.md
+|   +---nginx.conf
+|   +---package.json
+|   +---package-lock.json
+|   +---postcss.config.js
+|   +---README.md
+|   +---tailwind.config.js
+|   +---tsconfig.app.json
+|   +---tsconfig.json
+|   +---tsconfig.node.json
+|   \\---vite.config.ts
++---.gitignore
++---docker-compose.yml
++---ENDPOINTS_COMPLETOS.md
++---package.json
++---package-lock.json
++---PROJECT_STRUCTURE.txt
++---README.md
++---REFRESH_TOKEN_FRONTEND.md
++---start_backend.ps1
++---test_onboarding_flow.py
+\\---test_simple.py
