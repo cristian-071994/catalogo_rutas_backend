@@ -46,7 +46,7 @@ export default function LoginPage() {
                 <h2 className="text-3xl font-bold text-gray-900">Catálogo de Rutas</h2>
               </div>
             
-            <h1 className="text-4xl font-bold text-gray-900 leading-tight">
+            <h1 className="text-4xl md:text-6xl font-bold text-gray-900 leading-tight">
               Gestiona tus rutas de transporte de forma profesional
             </h1>
             
