@@ -9,6 +9,18 @@ interface FormDataConfigVehiculo {
   modelo: number | '';
 }
 
+interface Marca {
+  id: number;
+  nombre?: string;
+}
+
+interface ConfigVehiculo {
+  id: number;
+  marca_id: number;
+  modelo: number | string;
+  estado?: string | number | boolean;
+}
+
 export default function ConfiguracionVehicleModule() {
   const { usuario: currentUser } = useAuth();
   const isSuperAdmin = currentUser?.rol?.nombre === 'super_admin';
@@ -20,26 +32,26 @@ export default function ConfiguracionVehicleModule() {
   const [error, setError] = useState('');
   const queryClient = useQueryClient();
 
-  const { data: configs = [], isLoading } = useQuery({
+  const { data: configs = [], isLoading } = useQuery<ConfigVehiculo[]>({
     queryKey: ['configuracion-vehiculos'],
-    queryFn: () => api.getConfiguracionVehiculos(),
+    queryFn: async () => (await api.getConfiguracionVehiculos()) as ConfigVehiculo[],
   });
 
-  const { data: marcas = [] } = useQuery({
+  const { data: marcas = [] } = useQuery<Marca[]>({
     queryKey: ['marcas'],
-    queryFn: () => api.getMarcas(),
+    queryFn: async () => (await api.getMarcas()) as Marca[],
   });
 
   const marcasOrdenadas = useMemo(() => {
-    return [...marcas].sort((a: any, b: any) => (a.nombre || '').localeCompare(b.nombre || ''));
+    return [...marcas].sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
   }, [marcas]);
 
   const marcaMap = useMemo(() => {
-    return new Map(marcas.map((marca: any) => [marca.id, marca.nombre || '']));
+    return new Map(marcas.map((marca) => [marca.id, marca.nombre || '']));
   }, [marcas]);
 
   const configsOrdenadas = useMemo(() => {
-    return [...configs].sort((a: any, b: any) => {
+    return [...configs].sort((a, b) => {
       const marcaA = marcaMap.get(a.marca_id) || '';
       const marcaB = marcaMap.get(b.marca_id) || '';
       const cmpMarca = marcaA.localeCompare(marcaB);
@@ -112,7 +124,7 @@ export default function ConfiguracionVehicleModule() {
                 required
               >
                 <option value="">Selecciona una marca</option>
-                {marcasOrdenadas.map((marca: any) => (
+                {marcasOrdenadas.map((marca) => (
                   <option key={marca.id} value={marca.id}>
                     {marca.nombre}
                   </option>
@@ -162,7 +174,7 @@ export default function ConfiguracionVehicleModule() {
             </tr>
           </thead>
           <tbody>
-            {configsOrdenadas.map((config: any) => {
+            {configsOrdenadas.map((config) => {
               const marcaNombre = marcaMap.get(config.marca_id) || 'Desconocida';
               return (
                 <tr key={config.id} className="border-b border-neutral-100 hover:bg-neutral-50">
